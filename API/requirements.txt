@@ -1,0 +1,9 @@
+# Vintrace API Client Dependencies
+
+# Core dependencies
+pydantic>=2.0.0
+requests>=2.28.0
+python-dotenv>=0.19.0
+
+# For OpenAPI spec parsing (used by generator)
+pyyaml>=6.0

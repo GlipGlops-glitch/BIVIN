@@ -77,3 +77,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# API Client test outputs
+API/examples/*.json
+API/examples/*.csv
+API/examples/vintrace_export_*/
+work_orders_export.json
+vintrace_products_*.csv
+stock_*_details.json
+transactions_*.json
+vintrace_export_*/
