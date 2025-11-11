@@ -1,0 +1,23 @@
+// needs to be loaded after noty, jquery, jquery.browser
+
+function vxCheckBrowser() {
+
+	var bn = jQuery.browser.name; 
+	if (bn == 'msie' || bn == 'msedge') {
+		noty({
+			theme: 'relax', 
+			text: '<h2>Incompatible browser</h2>The browser you are using is not compliant with the latest web standards and has known compatibility issues with vintrace.<br/><br/>If you have one of the following web browsers installed, use it instead, or follow the links to download:<br/><br/><a href=\"http://mozilla.org/firefox\" target=\"_blank\">Firefox</a> | <a href=\"http://google.com/chrome\" target=\"_blank\">Google Chrome</a><br/><br/>', 
+			modal: true, 
+			type: 'warning',
+			layout: 'bottom',
+			closeWith: ['click', 'button', 'backdrop']
+		});
+	}
+}
+
+//window.addEventListener('orientationchange', broadcastSize);
+window.addEventListener('resize', broadcastSize); // this picks up a resize as well as an orientation change
+
+function broadcastSize() {
+	window.postMessage('InnerWindowSize:'+window.innerWidth+','+window.innerHeight, '*');
+}

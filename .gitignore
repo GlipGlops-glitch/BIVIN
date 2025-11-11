@@ -27,6 +27,28 @@ ENV/
 env/
 
 # IDEs
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Debug files
+debug_screenshots/
+*.png
+*.jpg
+
+# Selector tracking
+selector_tracking.json
+
+# Environment variables
+.env
+
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -49,3 +71,9 @@ downloads/
 reports/
 screenshots/
 debug_*.png
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

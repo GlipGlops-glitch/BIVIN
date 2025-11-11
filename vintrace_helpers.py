@@ -23,6 +23,13 @@ from typing import Optional, Dict
 from playwright.async_api import Page
 from dotenv import load_dotenv
 
+# Import centralized selectors
+try:
+    from vintrace_selectors import NewUISelectors, OldUISelectors, LoginSelectors, PopupSelectors, ReportSelectors
+except ImportError:
+    # Fallback if selectors module not available
+    NewUISelectors = OldUISelectors = LoginSelectors = PopupSelectors = ReportSelectors = None
+
 # ============================================================================
 # CONSTANTS
 # ============================================================================
@@ -451,12 +458,27 @@ async def get_main_iframe(page: Page):
         "iframe[id^='Iframe_']",  # Matches "Iframe_00f9496d-ed28-4a13-9321-e95349a09c99"
         "iframe.iFrameMax",  # The class from the HTML
         "iframe[vxiframeid]",  # Has the vxiframeid attribute
+    
+    # Use centralized selectors if available, otherwise fall back to defaults
+    if NewUISelectors:
+        iframe_selectors = NewUISelectors.IFRAME_MAIN.copy()
+    else:
+        iframe_selectors = [
+            "iframe[id^='Iframe_']",  # Matches "Iframe_00f9496d-ed28-4a13-9321-e95349a09c99"
+            "iframe.iFrameMax",  # The class from the HTML
+            "iframe[vxiframeid]",  # Has the vxiframeid attribute
+        ]
+    
+    # Add fallback selectors
+    iframe_selectors.extend([
         "iframe[src*='xhtml']",  # Source contains xhtml
         "iframe[name*='vintrace' i]",
         "iframe[src*='vintrace']",
         "iframe"  # Final fallback
     ]
 
+    ])
+    
     # Sort selectors by historical success
     iframe_selectors = get_sorted_selectors("get_main_iframe", iframe_selectors)
 
@@ -538,6 +560,22 @@ async def close_popups(page_or_frame):
         "button:has-text('×')"
     ]
 
+    
+    # Use centralized selectors if available
+    if PopupSelectors:
+        popup_close_selectors = PopupSelectors.CLOSE_BUTTONS.copy()
+    else:
+        popup_close_selectors = [
+            "button[data-role='end']",
+            ".popover button[data-role='end']",
+            ".tour button[data-role='end']",
+            "button:has-text('End tour')",
+            ".popover .close",
+            ".modal .close",
+            "button:has-text('Close')",
+            "button:has-text('×')"
+        ]
+    
     # Sort by historical success
     popup_close_selectors = get_sorted_selectors("close_popups", popup_close_selectors)
 
@@ -594,6 +632,14 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
     print("✓ Login page loaded")
 
     # Wait for the Login tab to be active (in case page loads on Register tab)
+    if LoginSelectors:
+        login_tab_selectors = LoginSelectors.LOGIN_TAB
+    else:
+        login_tab_selectors = [
+            'button[role="tab"][aria-selected="true"]:has-text("Login")',
+            'button[role="tab"]:has-text("Login")'
+        ]
+    
     try:
         await page.wait_for_selector(
             'button[role="tab"][aria-selected="true"]:has-text("Login")',
@@ -638,6 +684,40 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
         "input[type='password']",
     ]
 
+        login_tab = await page.wait_for_selector(login_tab_selectors[0], timeout=5000)
+        print("✓ Login tab is active")
+        track_selector("vintrace_login", login_tab_selectors[0], "css", "login_tab_check", "Verify login tab is active")
+    except Exception:
+        # Click the Login tab if it's not active
+        try:
+            login_tab_button = await page.wait_for_selector(login_tab_selectors[1], timeout=5000)
+            await login_tab_button.click()
+            print("✓ Clicked Login tab")
+            track_selector("vintrace_login", login_tab_selectors[1], "css", "login_tab_click", "Click login tab if not active")
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            print(f"⚠ Could not ensure Login tab is active: {e}")
+    
+    # Use centralized selectors if available
+    if LoginSelectors:
+        email_selectors = LoginSelectors.EMAIL_INPUT.copy()
+        password_selectors = LoginSelectors.PASSWORD_INPUT.copy()
+    else:
+        # Fallback selectors based on actual HTML structure
+        email_selectors = [
+            "input#email",  # Exact ID from the login page HTML
+            "input[name='email'][type='email']",
+            "input[placeholder='Enter email']",
+            "input[type='email']",
+        ]
+        
+        password_selectors = [
+            "input#password",  # Exact ID from the login page HTML
+            "input[name='password'][type='password']",
+            "input[placeholder='Enter password']",
+            "input[type='password']",
+        ]
+    
     # Sort by historical success
     email_selectors = get_sorted_selectors("vintrace_login_email", email_selectors)
     password_selectors = get_sorted_selectors("vintrace_login_password", password_selectors)
@@ -701,6 +781,16 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
         "button[type='submit']",
     ]
 
+    if LoginSelectors:
+        login_btn_selectors = LoginSelectors.LOGIN_BUTTON.copy()
+    else:
+        login_btn_selectors = [
+            "button[type='submit'].chakra-button:has-text('Login')",
+            "button[type='submit']:has-text('Login')",
+            "button.chakra-button:has-text('Login')",
+            "button[type='submit']",
+        ]
+    
     # Sort by historical success
     login_btn_selectors = get_sorted_selectors("vintrace_login_button", login_btn_selectors)
 
@@ -841,6 +931,22 @@ async def navigate_to_reports_new_ui(page: Page):
         "span.ui-icon-reports",  # By icon class, then get parent link
     ]
 
+    
+    # Use centralized selectors if available
+    if NewUISelectors:
+        reports_selectors = NewUISelectors.REPORTS_MENU.copy()
+    else:
+        # Multiple selector strategies for the Reports menu item
+        reports_selectors = [
+            "a#menuform\\:menu-reports-cs",  # Exact ID with escaped colon
+            "a[id='menuform:menu-reports-cs']",  # ID with attribute selector
+            "li.ui-menuitem a:has-text('Reports')",  # By text in menu item
+            "a.ui-menuitem-link:has-text('Reports')",  # By class and text
+        ]
+    
+    # Add icon-based selector as fallback
+    reports_selectors.append("span.ui-icon-reports")
+    
     # Sort by historical success
     reports_selectors = get_sorted_selectors("navigate_to_reports_new_ui", reports_selectors)
 
@@ -1193,6 +1299,18 @@ async def navigate_to_reports_old_ui(page: Page):
         "div[title='Reports']"
     ]
 
+    
+    # Click Reports icon - use centralized selectors if available
+    reports_clicked = False
+    
+    if OldUISelectors:
+        selectors = OldUISelectors.REPORTS_ICON.copy()
+    else:
+        selectors = [
+            "#c_170",
+            "div[title='Reports']"
+        ]
+    
     # Sort by historical success
     selectors = get_sorted_selectors("navigate_to_reports_old_ui", selectors)
 
@@ -1745,4 +1863,107 @@ async def configure_and_download_report(
     else:
         print("❌ Report download failed")
         print("=" * 60)
+        return None
+        checkboxes: Dict of {label: True/False} for checkboxes to set
+        dropdown_options: List of (option_text, dropdown_index) tuples for dropdowns
+        
+    Returns:
+        str or None: Path to downloaded file, or None if failed
+    """
+    # Find the report strip
+    report_strip = await find_report_strip_by_title(page, report_title)
+    if not report_strip:
+        return None
+    
+    # Select format
+    if format_type:
+        await select_report_format(report_strip, format_type)
+    
+    # Set checkboxes if provided
+    if checkboxes:
+        for label, checked in checkboxes.items():
+            await set_report_checkbox(report_strip, label, checked)
+    
+    # Select dropdown options if provided
+    if dropdown_options:
+        for option_text, dropdown_index in dropdown_options:
+            await select_report_dropdown_option(report_strip, option_text, dropdown_index)
+    
+    # Download the report
+    return await download_report_from_strip(page, report_strip, save_dir)
+
+
+# ============================================================================
+# BROWSER INITIALIZATION
+# ============================================================================
+
+async def initialize_browser(playwright_instance, headless: bool = False):
+    """
+    Initialize a Playwright browser with standard settings.
+    
+    Args:
+        playwright_instance: Playwright instance from async_playwright()
+        headless: Whether to run in headless mode (default: False)
+        
+    Returns:
+        tuple: (browser, context, page)
+    """
+    print("🌐 Initializing browser...")
+    
+    # Launch browser with standard options
+    browser = await playwright_instance.chromium.launch(
+        headless=headless,
+        args=[
+            '--disable-blink-features=AutomationControlled',
+            '--disable-dev-shm-usage',
+            '--no-sandbox'
+        ]
+    )
+    
+    # Create context with realistic viewport
+    context = await browser.new_context(
+        viewport={'width': 1920, 'height': 1080},
+        user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    )
+    
+    # Create page
+    page = await context.new_page()
+    
+    # Set longer default timeouts
+    page.set_default_timeout(60000)  # 60 seconds
+    
+    print("✓ Browser initialized")
+    return browser, context, page
+
+
+# ============================================================================
+# DEBUG UTILITIES
+# ============================================================================
+
+async def save_debug_screenshot(page_or_frame, filename_prefix: str):
+    """
+    Save a debug screenshot with timestamp.
+    
+    Args:
+        page_or_frame: Playwright Page or Frame object
+        filename_prefix: Prefix for the screenshot filename
+        
+    Returns:
+        str: Path to saved screenshot
+    """
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{filename_prefix}_{timestamp}.png"
+    
+    # Save to debug directory
+    debug_dir = "debug_screenshots"
+    os.makedirs(debug_dir, exist_ok=True)
+    
+    filepath = os.path.join(debug_dir, filename)
+    
+    try:
+        await page_or_frame.screenshot(path=filepath, full_page=True)
+        print(f"📸 Debug screenshot saved: {filepath}")
+        return filepath
+    except Exception as e:
+        print(f"⚠ Could not save debug screenshot: {e}")
         return None
