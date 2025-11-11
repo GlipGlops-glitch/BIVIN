@@ -1,8 +1,17 @@
-#  python tools/BI/vintrace_playwright_vessels_report.py
+"""
+Vintrace Vessel Details Report Automation
+Downloads vessel/barrel details CSV report and removes the first row before saving.
 
+The Vintrace export includes an extra first row (e.g., "Exported on: DATE") before 
+the actual headers. This script removes that first row so the headers (row 2 in the 
+original) become the actual column headers in the saved CSV file.
 
+Usage: python vintrace_playwright_vessels_report.py
 
-
+Author: GlipGlops-glitch
+Created: 2025-01-11
+Last Updated: 2025-01-11
+"""
 import asyncio
 import os
 import sys
@@ -17,19 +26,23 @@ from vintrace_helpers import (
     wait_for_all_vintrace_loaders,
     get_main_iframe,
     initialize_browser,
+    save_debug_screenshot,
+    track_selector,
     LARGE_TIMEOUT
 )
 
-# Use LARGE_TIMEOUT from helpers for consistency
-DOWNLOAD_TIMEOUT = LARGE_TIMEOUT  # Will be 5 minutes when helpers is updated
-SELECTOR_TIMEOUT = LARGE_TIMEOUT  # Will be 5 minutes when helpers is updated
+# Import centralized selectors
+from vintrace_selectors import NewUISelectors
 
-EXCEL_SAVE_DIR = "Main/data/vintrace_reports/excel/"
-os.makedirs(EXCEL_SAVE_DIR, exist_ok=True)
 
-async def download_excel_report(page: Page):
+DOWNLOAD_TIMEOUT = 300_000  # 5 minutes
+
+CSV_SAVE_DIR = "Main/data/vintrace_reports/vessel_details/"
+os.makedirs(CSV_SAVE_DIR, exist_ok=True)
+
+async def download_vessel_details_report(page: Page):
     print("\n" + "=" * 60)
-    print("STEP 2: DOWNLOADING EXCEL REPORT")
+    print("STEP 2: DOWNLOADING VESSEL DETAILS REPORT")
     print("=" * 60)
     
     # Get the main iframe where all content is
@@ -51,17 +64,14 @@ async def download_excel_report(page: Page):
     
     # Step 1: Click the export button (now in iframe)
     print("\nAttempting to click export button...")
-    export_btn_selectors = [
-        "button#vesselsForm\\:vesselsDT\\:exportButton",
-        "button[id='vesselsForm:vesselsDT:exportButton']",
-        "button.vin-download-btn",
-        "button[name='vesselsForm:vesselsDT:exportButton']"
-    ]
+    
+    # Use centralized selectors from vintrace_selectors.py
+    export_btn_selectors = NewUISelectors.EXPORT_BUTTON.copy()
     
     export_clicked = False
     for selector in export_btn_selectors:
         try:
-            await iframe.wait_for_selector(selector, timeout=SELECTOR_TIMEOUT, state="attached")
+            await iframe.wait_for_selector(selector, timeout=10000, state="attached")
             export_btn = await iframe.query_selector(selector)
             if export_btn:
                 await export_btn.scroll_into_view_if_needed()
@@ -74,6 +84,7 @@ async def download_excel_report(page: Page):
                 
                 await export_btn.click()
                 print(f"✓ Clicked export button using selector: {selector}")
+                track_selector("download_vessel_details_report", selector, "css", "export_button", "Export button in vessels page")
                 export_clicked = True
                 await asyncio.sleep(1.5)
                 break
@@ -83,55 +94,50 @@ async def download_excel_report(page: Page):
     
     if not export_clicked:
         print("❌ ERROR: Could not click export button")
-        await page.screenshot(path="export_button_error.png")
+        await save_debug_screenshot(page, "export_button_error")
         return False
     
-    # Step 2: Click "Excel" in the menu
-    print("\nAttempting to click 'Excel' menu item...")
-    excel_selectors = [
-        "li#vesselsForm\\:vesselsDT\\:excelExportSubMenu > a.ui-submenu-link",
-        "li[id='vesselsForm:vesselsDT:excelExportSubMenu'] > a.ui-submenu-link",
-        "li.vin-exportMenuOption:has-text('Excel') > a",
-        ".ui-menu-parent:has-text('Excel') > a.ui-submenu-link"
-    ]
+    # Step 2: Click "Barrel details" in the menu
+    print("\nAttempting to click 'Barrel details' menu item...")
     
-    excel_clicked = False
-    for selector in excel_selectors:
+    # Use centralized selectors
+    barrel_details_selectors = NewUISelectors.BARREL_DETAILS_MENU_ITEM.copy()
+    
+    barrel_clicked = False
+    for selector in barrel_details_selectors:
         try:
-            await iframe.wait_for_selector(selector, timeout=SELECTOR_TIMEOUT, state="visible")
-            excel_link = await iframe.query_selector(selector)
+            await iframe.wait_for_selector(selector, timeout=10000, state="visible")
+            barrel_link = await iframe.query_selector(selector)
             
-            if excel_link:
-                await excel_link.scroll_into_view_if_needed()
+            if barrel_link:
+                await barrel_link.scroll_into_view_if_needed()
                 await asyncio.sleep(0.3)
                 
-                await excel_link.click()
+                await barrel_link.click()
                 await asyncio.sleep(1)
-                print(f"✓ Clicked 'Excel' using selector: {selector}")
-                excel_clicked = True
+                print(f"✓ Clicked 'Barrel details' using selector: {selector}")
+                track_selector("download_vessel_details_report", selector, "css", "barrel_details_menu", "Barrel details menu item")
+                barrel_clicked = True
                 break
         except Exception as e:
             print(f"  ✗ Failed with selector '{selector}': {e}")
             continue
     
-    if not excel_clicked:
-        print("❌ ERROR: Could not click 'Excel' menu item")
-        await page.screenshot(path="excel_menu_error.png")
+    if not barrel_clicked:
+        print("❌ ERROR: Could not click 'Barrel details' menu item")
+        await save_debug_screenshot(page, "barrel_details_menu_error")
         return False
     
     # Step 3: Click "All" to download the report
     print("\nAttempting to click 'All' to download report...")
-    all_option_selectors = [
-        "a#vesselsForm\\:vesselsDT\\:excelAllExportOptionMI",
-        "a[id='vesselsForm:vesselsDT:excelAllExportOptionMI']",
-        "li#vesselsForm\\:vesselsDT\\:excelExportSubMenu ul li:has-text('All') a",
-        ".ui-menu-child a:has-text('All')"
-    ]
+    
+    # Use centralized selectors
+    all_option_selectors = NewUISelectors.BARREL_DETAILS_ALL_OPTION.copy()
     
     download_started = False
     for selector in all_option_selectors:
         try:
-            await iframe.wait_for_selector(selector, timeout=SELECTOR_TIMEOUT, state="attached")
+            await iframe.wait_for_selector(selector, timeout=10000, state="attached")
             all_option = await iframe.query_selector(selector)
             
             if all_option:
@@ -151,48 +157,37 @@ async def download_excel_report(page: Page):
                 async with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
                     await all_option.click(force=True)
                     print(f"✓ Clicked 'All' option using selector: {selector}")
+                    track_selector("download_vessel_details_report", selector, "css", "barrel_all_option", "All option for barrel details")
                 
                 # Wait for download to complete
                 download = await download_info.value
                 temp_path = await download.path()
                 
-                # Save to temporary location first
-                temp_final_path = os.path.join(EXCEL_SAVE_DIR, "temp_download.xls")
-                shutil.move(temp_path, temp_final_path)
-                print(f"✓ Downloaded file to temporary location")
-                
-                # Process the file to remove first row
-                print("🔄 Processing file: removing first row...")
+                # Load CSV and skip first row (headers start on row 2)
+                print("📊 Processing CSV to remove first row...")
                 try:
-                    # Read the Excel file
-                    df = pd.read_excel(temp_final_path)
+                    # Read the CSV file
+                    df = pd.read_csv(temp_path, skiprows=[0])  # Skip the first row (row 0)
                     
-                    # Remove the first row (index 0)
-                    df = df.iloc[1:].reset_index(drop=True)
+                    # Save with custom filename
+                    final_path = os.path.join(CSV_SAVE_DIR, "Vintrace_all_vessels.csv")
+                    if os.path.exists(final_path):
+                        os.remove(final_path)
                     
-                    # Save as XLS format
-                    final_path = os.path.join(EXCEL_SAVE_DIR, "Vintrace_all_vessels.xls")
-                    df.to_excel(final_path, index=False, engine='xlwt')
-                    
-                    # Remove temporary file
-                    os.remove(temp_final_path)
-                    
-                    print(f"✓ First row removed successfully")
-                    print(f"✓ Report saved to: {final_path}")
+                    # Save the processed DataFrame
+                    df.to_csv(final_path, index=False)
+                    print(f"✓ Removed first row and saved report to: {final_path}")
                     print("=" * 60)
                     download_started = True
                     return True
-                    
                 except Exception as e:
-                    print(f"❌ ERROR processing file: {e}")
-                    print(f"⚠ Saving original file without processing...")
-                    # If processing fails, save the original
-                    final_path = os.path.join(EXCEL_SAVE_DIR, "Vintrace_all_vessels.xls")
+                    print(f"❌ Error processing CSV: {e}")
+                    # Fallback: save original file if processing fails
+                    final_path = os.path.join(CSV_SAVE_DIR, "Vintrace_all_vessels.csv")
                     if os.path.exists(final_path):
                         os.remove(final_path)
-                    shutil.move(temp_final_path, final_path)
-                    print(f"✓ Report saved to: {final_path}")
-                    print("=" * 60)
+                    shutil.move(temp_path, final_path)
+                    print(f"⚠ Saved original file without processing to: {final_path}")
                     return True
                 
         except Exception as e:
@@ -201,7 +196,7 @@ async def download_excel_report(page: Page):
     
     if not download_started:
         print("❌ ERROR: Could not click 'All' option or download failed")
-        await page.screenshot(path="download_all_error.png")
+        await save_debug_screenshot(page, "download_all_error")
         return False
     
     return True
@@ -226,8 +221,8 @@ async def main():
             await browser.close()
             return
 
-        # Download excel report
-        download_success = await download_excel_report(page)
+        # Download vessel details report
+        download_success = await download_vessel_details_report(page)
         
         if not download_success:
             print("\n" + "=" * 60)
