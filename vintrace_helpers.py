@@ -453,12 +453,6 @@ async def get_main_iframe(page: Page):
 
     await asyncio.sleep(2)
 
-    # Strategy: Look for iframe with the specific ID pattern from the HTML
-    iframe_selectors = [
-        "iframe[id^='Iframe_']",  # Matches "Iframe_00f9496d-ed28-4a13-9321-e95349a09c99"
-        "iframe.iFrameMax",  # The class from the HTML
-        "iframe[vxiframeid]",  # Has the vxiframeid attribute
-    
     # Use centralized selectors if available, otherwise fall back to defaults
     if NewUISelectors:
         iframe_selectors = NewUISelectors.IFRAME_MAIN.copy()
@@ -475,8 +469,6 @@ async def get_main_iframe(page: Page):
         "iframe[name*='vintrace' i]",
         "iframe[src*='vintrace']",
         "iframe"  # Final fallback
-    ]
-
     ])
     
     # Sort selectors by historical success
@@ -683,20 +675,6 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
         "input[placeholder='Enter password']",
         "input[type='password']",
     ]
-
-        login_tab = await page.wait_for_selector(login_tab_selectors[0], timeout=5000)
-        print("✓ Login tab is active")
-        track_selector("vintrace_login", login_tab_selectors[0], "css", "login_tab_check", "Verify login tab is active")
-    except Exception:
-        # Click the Login tab if it's not active
-        try:
-            login_tab_button = await page.wait_for_selector(login_tab_selectors[1], timeout=5000)
-            await login_tab_button.click()
-            print("✓ Clicked Login tab")
-            track_selector("vintrace_login", login_tab_selectors[1], "css", "login_tab_click", "Click login tab if not active")
-            await asyncio.sleep(0.5)
-        except Exception as e:
-            print(f"⚠ Could not ensure Login tab is active: {e}")
     
     # Use centralized selectors if available
     if LoginSelectors:
@@ -969,7 +947,7 @@ async def navigate_to_reports_new_ui(page: Page):
                             "navigate_to_reports_new_ui",
                             selector,
                             "css",
-                            "new_ui_reports"
+                            "new_ui_reports",
                             "Reports menu via icon in new UI"
                         )
                         await wait_for_all_vintrace_loaders(page)
@@ -988,7 +966,7 @@ async def navigate_to_reports_new_ui(page: Page):
                         "navigate_to_reports_new_ui",
                         selector,
                         "css",
-                        "new_ui_reports"
+                        "new_ui_reports",
                         "Reports menu item in new UI"
                     )
                     await wait_for_all_vintrace_loaders(page)
@@ -1065,7 +1043,7 @@ async def navigate_to_report_category(page: Page, category_name: str):
                         "navigate_to_report_category",
                         "span[id$='|Text']",
                         "css",
-                        f"category_{category_name}"
+                        f"category_{category_name}",
                         f"Report category: {category_name}"
                     )
                     await wait_for_all_vintrace_loaders(page)
@@ -1096,7 +1074,7 @@ async def navigate_to_report_category(page: Page, category_name: str):
                         "navigate_to_report_category",
                         selector,
                         "css",
-                        f"category_{category_name}"
+                        f"category_{category_name}",
                         f"Report category: {category_name}"
                     )
                     await wait_for_all_vintrace_loaders(page)
@@ -1120,7 +1098,7 @@ async def navigate_to_report_category(page: Page, category_name: str):
                     "navigate_to_report_category",
                     "table row text match",
                     "text",
-                    f"category_{category_name}"
+                    f"category_{category_name}",
                     f"Report category: {category_name}"
                 )
                 await wait_for_all_vintrace_loaders(page)
@@ -1177,7 +1155,7 @@ async def find_and_click_report_by_name(page: Page, report_name: str):
                         "find_and_click_report_by_name",
                         selector,
                         "css",
-                        f"report_{report_name}"
+                        f"report_{report_name}",
                         f"Report: {report_name}"
                     )
                     await wait_for_all_vintrace_loaders(page)
@@ -1209,7 +1187,7 @@ async def find_and_click_report_by_name(page: Page, report_name: str):
                             "find_and_click_report_by_name",
                             "img[src*='search-grey.png']",
                             "css",
-                            f"report_{report_name}_run"
+                            f"report_{report_name}_run",
                             f"Run button for report: {report_name}"
                         )
                         await wait_for_all_vintrace_loaders(page)
@@ -1258,7 +1236,7 @@ async def close_report_window(page: Page):
                     "close_report_window",
                     selector,
                     "css",
-                    "close_report_window"
+                    "close_report_window",
                     "Close button for report window"
                 )
                 await wait_for_all_vintrace_loaders(page)
@@ -1327,7 +1305,7 @@ async def navigate_to_reports_old_ui(page: Page):
                     "navigate_to_reports_old_ui",
                     selector,
                     "css",
-                    "old_ui_reports"
+                    "old_ui_reports",
                     "Reports icon in old UI"
                 )
                 break
@@ -1380,7 +1358,7 @@ async def click_vintage_harvest_tab_old_ui(page: Page):
                     "click_vintage_harvest_tab_old_ui",
                     selector,
                     "css",
-                    "vintage_harvest_tab"
+                    "vintage_harvest_tab",
                     "Vintage/Harvest tab in old UI"
                 )
                 await wait_for_all_vintrace_loaders(page)
@@ -1400,7 +1378,7 @@ async def click_vintage_harvest_tab_old_ui(page: Page):
                 "click_vintage_harvest_tab_old_ui",
                 "//*[text()='Vintage/Harvest']",
                 "xpath",
-                "vintage_harvest_tab"
+                "vintage_harvest_tab",
                 "Vintage/Harvest tab via xpath"
             )
             await wait_for_all_vintrace_loaders(page)
@@ -1449,7 +1427,7 @@ async def find_report_strip_by_title(page: Page, report_title: str):
                     "find_report_strip_by_title",
                     "div.reportStrip",
                     "css",
-                    f"strip_{report_title}"
+                    f"strip_{report_title}",
                     f"Report strip for: {report_title}"
                 )
                 return strip
@@ -1501,7 +1479,7 @@ async def select_report_format(report_strip, format_type: str = "CSV"):
                         "select_report_format",
                         "select option",
                         "css",
-                        f"format_{format_type}"
+                        f"format_{format_type}",
                         f"Report format: {format_type}"
                     )
                     await asyncio.sleep(0.5)
@@ -1563,7 +1541,7 @@ async def set_report_checkbox(report_strip, checkbox_label: str, checked: bool):
                                 "set_report_checkbox",
                                 "img[src*='Checkbox']",
                                 "css",
-                                f"checkbox_{checkbox_label}"
+                                f"checkbox_{checkbox_label}",
                                 f"Checkbox: {checkbox_label}"
                             )
                             await asyncio.sleep(0.3)
@@ -1590,7 +1568,7 @@ async def set_report_checkbox(report_strip, checkbox_label: str, checked: bool):
                                 "set_report_checkbox",
                                 "input[type='checkbox']",
                                 "css",
-                                f"checkbox_{checkbox_label}"
+                                f"checkbox_{checkbox_label}",
                                 f"Checkbox: {checkbox_label}"
                             )
                             await asyncio.sleep(0.3)
@@ -1644,7 +1622,7 @@ async def select_report_dropdown_option(report_strip, option_text: str, dropdown
                     "select_report_dropdown_option",
                     "select option",
                     "css",
-                    f"dropdown_{option_text}"
+                    f"dropdown_{option_text}",
                     f"Dropdown option: {option_text}"
                 )
                 await asyncio.sleep(0.3)
@@ -1692,7 +1670,7 @@ async def click_generate_button(report_strip):
                     "click_generate_button",
                     selector,
                     "css",
-                    "generate_button"
+                    "generate_button",
                     "Generate button for report"
                 )
                 await asyncio.sleep(0.5)
@@ -1715,7 +1693,7 @@ async def click_generate_button(report_strip):
                 "click_generate_button",
                 ".//button[contains(text(), 'Generate')]",
                 "xpath",
-                "generate_button"
+                "generate_button",
                 "Generate button via xpath"
             )
             await asyncio.sleep(0.5)
@@ -1864,33 +1842,6 @@ async def configure_and_download_report(
         print("❌ Report download failed")
         print("=" * 60)
         return None
-        checkboxes: Dict of {label: True/False} for checkboxes to set
-        dropdown_options: List of (option_text, dropdown_index) tuples for dropdowns
-        
-    Returns:
-        str or None: Path to downloaded file, or None if failed
-    """
-    # Find the report strip
-    report_strip = await find_report_strip_by_title(page, report_title)
-    if not report_strip:
-        return None
-    
-    # Select format
-    if format_type:
-        await select_report_format(report_strip, format_type)
-    
-    # Set checkboxes if provided
-    if checkboxes:
-        for label, checked in checkboxes.items():
-            await set_report_checkbox(report_strip, label, checked)
-    
-    # Select dropdown options if provided
-    if dropdown_options:
-        for option_text, dropdown_index in dropdown_options:
-            await select_report_dropdown_option(report_strip, option_text, dropdown_index)
-    
-    # Download the report
-    return await download_report_from_strip(page, report_strip, save_dir)
 
 
 # ============================================================================
