@@ -94,3 +94,4 @@ vintrace_export_*/
 
 # Transaction lineage analysis outputs
 lineage_reports/
+example_exports/
