@@ -175,6 +175,41 @@ def get_on_hand_batches_from_vessels(vessels: List[Dict]) -> Set[str]:
     return on_hand_batches
 
 
+def get_vessel_batch_details(vessels: List[Dict]) -> Dict[str, Dict]:
+    """
+    Extract detailed vessel-batch information from vessel data
+    
+    Args:
+        vessels: List of vessel dictionaries from vessels_main.json
+        
+    Returns:
+        Dict mapping (vessel_name, batch_name) -> vessel details with volume
+    """
+    vessel_details = {}
+    
+    for vessel in vessels:
+        volume = vessel.get('volume_value', 0)
+        vessel_name = vessel.get('name', '')
+        batch_name = vessel.get('wine_batch_name', '')
+        
+        # Only include vessels with volume and batch name
+        if volume and volume > 0 and batch_name and vessel_name:
+            key = (vessel_name, batch_name)
+            vessel_details[key] = {
+                'vessel_name': vessel_name,
+                'batch_name': batch_name,
+                'volume': volume,
+                'vessel_type': vessel.get('vessel_type', ''),
+                'winery_name': vessel.get('winery_name', ''),
+                'description': vessel.get('description', ''),
+                'vintage': vessel.get('vintage', ''),
+                'designated_variety_name': vessel.get('designated_variety_name', '')
+            }
+    
+    logger.info(f"Found {len(vessel_details)} vessel-batch combinations with volume > 0")
+    return vessel_details
+
+
 def generate_inventory_summary_report(
     analyzer: TransactionLineageAnalyzer,
     vessel_batches: Optional[Set[str]] = None,
@@ -278,6 +313,109 @@ def generate_inventory_summary_report(
     return report_text
 
 
+def generate_vessel_batch_lineage_report(
+    vessel_details: Dict[str, Dict],
+    analyzer: TransactionLineageAnalyzer,
+    output_dir: Path
+) -> str:
+    """
+    Generate a comprehensive report for each on-hand vessel-batch combination
+    showing losses and source lots
+    
+    Args:
+        vessel_details: Dict of (vessel_name, batch_name) -> vessel info
+        analyzer: TransactionLineageAnalyzer instance
+        output_dir: Directory to save the report
+        
+    Returns:
+        Formatted report string
+    """
+    report = []
+    report.append("=" * 100)
+    report.append("ON-HAND VESSEL-BATCH INVENTORY LINEAGE REPORT")
+    report.append("=" * 100)
+    report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append("")
+    report.append(f"Total on-hand vessel-batch combinations: {len(vessel_details)}")
+    report.append("")
+    
+    # Sort by batch name then vessel name for consistent output
+    sorted_items = sorted(vessel_details.items(), key=lambda x: (x[1]['batch_name'], x[1]['vessel_name']))
+    
+    for (vessel_name, batch_name), details in sorted_items:
+        report.append("=" * 100)
+        report.append(f"VESSEL: {vessel_name}")
+        report.append(f"BATCH: {batch_name}")
+        report.append("-" * 100)
+        report.append(f"Current Volume: {details['volume']:.2f} gallons")
+        report.append(f"Vessel Type: {details['vessel_type']}")
+        report.append(f"Winery: {details['winery_name']}")
+        report.append(f"Vintage: {details['vintage']}")
+        report.append(f"Variety: {details['designated_variety_name']}")
+        report.append("")
+        
+        # Get lineage for this batch
+        lineage = analyzer.get_batch_lineage(batch_name)
+        
+        if lineage:
+            # Section 1: Losses/Gains relative to this batch
+            if lineage.losses:
+                report.append("LOSSES/GAINS:")
+                report.append("-" * 100)
+                total_loss = 0.0
+                for loss in lineage.losses:
+                    report.append(f"  Date: {loss['op_date']:<12} Op: {loss['op_id']:<12} Type: {loss['op_type']:<20}")
+                    report.append(f"    Amount: {loss['amount']:>10.2f} gallons")
+                    report.append(f"    Reason: {loss['reason']}")
+                    total_loss += loss['amount']
+                report.append("-" * 100)
+                report.append(f"  Total Net Loss/Gain: {total_loss:>10.2f} gallons")
+                report.append("")
+            else:
+                report.append("LOSSES/GAINS: None recorded")
+                report.append("")
+            
+            # Section 2: Source lots that contributed to this batch
+            if lineage.contributing_batches:
+                report.append(f"SOURCE LOTS ({len(lineage.contributing_batches)} contributing batches):")
+                report.append("-" * 100)
+                report.append(f"{'Source Batch Name':<50} {'Gallons Contributed':>20}")
+                report.append("-" * 100)
+                
+                total_contributed = 0.0
+                for source_batch, gallons in sorted(lineage.contributing_batches.items()):
+                    report.append(f"{source_batch:<50} {gallons:>20.2f}")
+                    total_contributed += gallons
+                
+                report.append("-" * 100)
+                report.append(f"{'Total Contributed:':<50} {total_contributed:>20.2f}")
+                report.append("")
+            else:
+                report.append("SOURCE LOTS: This is an original/source batch (no contributing batches)")
+                report.append("")
+        else:
+            report.append("LINEAGE DATA: Not found in transaction history")
+            report.append("(This batch may have been created before the transaction data period)")
+            report.append("")
+        
+        report.append("")
+    
+    report.append("=" * 100)
+    report.append("END OF REPORT")
+    report.append("=" * 100)
+    
+    report_text = "\n".join(report)
+    
+    # Save to file
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_file = output_dir / "vessel_batch_lineage_report.txt"
+    with open(summary_file, 'w', encoding='utf-8') as f:
+        f.write(report_text)
+    logger.info(f"Saved vessel-batch lineage report to {summary_file}")
+    
+    return report_text
+
+
 def generate_detailed_batch_reports(
     analyzer: TransactionLineageAnalyzer,
     batches: Set[str],
@@ -314,7 +452,8 @@ def generate_detailed_batch_reports(
 
 def export_analysis_data(
     analyzer: TransactionLineageAnalyzer,
-    output_dir: Path
+    output_dir: Path,
+    vessel_details: Optional[Dict[str, Dict]] = None
 ):
     """
     Export analysis data in various formats for further analysis
@@ -322,6 +461,7 @@ def export_analysis_data(
     Args:
         analyzer: TransactionLineageAnalyzer instance
         output_dir: Directory to save exports
+        vessel_details: Optional dict of vessel-batch details from vessels_main.json
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -348,7 +488,135 @@ def export_analysis_data(
         str(output_dir / 'complete_lineage_data.json')
     )
     
+    # Export vessel-batch specific data if available
+    if vessel_details:
+        export_vessel_batch_data(vessel_details, analyzer, output_dir)
+    
     logger.info(f"Exported analysis data to {output_dir}")
+
+
+def export_vessel_batch_data(
+    vessel_details: Dict[str, Dict],
+    analyzer: TransactionLineageAnalyzer,
+    output_dir: Path
+):
+    """
+    Export vessel-batch specific data with losses and source lots
+    
+    Args:
+        vessel_details: Dict of (vessel_name, batch_name) -> vessel info
+        analyzer: TransactionLineageAnalyzer instance
+        output_dir: Directory to save exports
+    """
+    # Export 1: Vessel-Batch inventory with losses
+    losses_rows = []
+    for (vessel_name, batch_name), details in vessel_details.items():
+        lineage = analyzer.get_batch_lineage(batch_name)
+        
+        if lineage and lineage.losses:
+            for loss in lineage.losses:
+                losses_rows.append({
+                    'Vessel_Name': vessel_name,
+                    'Batch_Name': batch_name,
+                    'Current_Volume_Gal': details['volume'],
+                    'Vessel_Type': details['vessel_type'],
+                    'Winery': details['winery_name'],
+                    'Vintage': details['vintage'],
+                    'Variety': details['designated_variety_name'],
+                    'Loss_Op_Date': loss['op_date'],
+                    'Loss_Op_Id': loss['op_id'],
+                    'Loss_Op_Type': loss['op_type'],
+                    'Loss_Amount_Gal': loss['amount'],
+                    'Loss_Reason': loss['reason']
+                })
+        else:
+            # Include entry even if no losses to show the vessel exists
+            losses_rows.append({
+                'Vessel_Name': vessel_name,
+                'Batch_Name': batch_name,
+                'Current_Volume_Gal': details['volume'],
+                'Vessel_Type': details['vessel_type'],
+                'Winery': details['winery_name'],
+                'Vintage': details['vintage'],
+                'Variety': details['designated_variety_name'],
+                'Loss_Op_Date': '',
+                'Loss_Op_Id': '',
+                'Loss_Op_Type': '',
+                'Loss_Amount_Gal': 0,
+                'Loss_Reason': 'No losses recorded'
+            })
+    
+    if losses_rows:
+        losses_file = output_dir / 'vessel_batch_losses.csv'
+        with open(losses_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=losses_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(losses_rows)
+        logger.info(f"Exported vessel-batch losses to {losses_file}")
+    
+    # Export 2: Vessel-Batch with source lots
+    source_rows = []
+    for (vessel_name, batch_name), details in vessel_details.items():
+        lineage = analyzer.get_batch_lineage(batch_name)
+        
+        if lineage and lineage.contributing_batches:
+            for source_batch, gallons in lineage.contributing_batches.items():
+                source_rows.append({
+                    'Vessel_Name': vessel_name,
+                    'Batch_Name': batch_name,
+                    'Current_Volume_Gal': details['volume'],
+                    'Vessel_Type': details['vessel_type'],
+                    'Winery': details['winery_name'],
+                    'Vintage': details['vintage'],
+                    'Variety': details['designated_variety_name'],
+                    'Source_Batch_Name': source_batch,
+                    'Source_Gallons_Contributed': gallons
+                })
+        else:
+            # Include entry even if no source lots to show it's an original batch
+            source_rows.append({
+                'Vessel_Name': vessel_name,
+                'Batch_Name': batch_name,
+                'Current_Volume_Gal': details['volume'],
+                'Vessel_Type': details['vessel_type'],
+                'Winery': details['winery_name'],
+                'Vintage': details['vintage'],
+                'Variety': details['designated_variety_name'],
+                'Source_Batch_Name': '',
+                'Source_Gallons_Contributed': 0
+            })
+    
+    if source_rows:
+        sources_file = output_dir / 'vessel_batch_sources.csv'
+        with open(sources_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=source_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(source_rows)
+        logger.info(f"Exported vessel-batch sources to {sources_file}")
+    
+    # Export 3: Combined JSON with all vessel-batch data
+    combined_data = {}
+    for (vessel_name, batch_name), details in vessel_details.items():
+        lineage = analyzer.get_batch_lineage(batch_name)
+        
+        key = f"{vessel_name}|{batch_name}"
+        combined_data[key] = {
+            'vessel_name': vessel_name,
+            'batch_name': batch_name,
+            'current_volume': details['volume'],
+            'vessel_type': details['vessel_type'],
+            'winery': details['winery_name'],
+            'vintage': details['vintage'],
+            'variety': details['designated_variety_name'],
+            'losses': lineage.losses if lineage else [],
+            'source_lots': lineage.contributing_batches if lineage else {},
+            'has_lineage_data': lineage is not None
+        }
+    
+    json_file = output_dir / 'vessel_batch_complete.json'
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump(combined_data, f, indent=2, ensure_ascii=False)
+    logger.info(f"Exported complete vessel-batch data to {json_file}")
 
 
 def main():
@@ -405,37 +673,37 @@ def main():
         logger.info("  Option 2: Fetch from API: python fetch_transactions_for_analysis.py")
         sys.exit(1)
     
-    # Convert transaction file to simple format
-    temp_simple_file = Path(args.output_dir) / 'transactions_simple_format.csv'
-    temp_simple_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    if not convert_transaction_csv_to_simple_format(args.transaction_file, str(temp_simple_file)):
-        logger.error("Failed to convert transaction data")
-        sys.exit(1)
-    
-    if args.convert_only:
-        print(f"\n✓ Converted transaction data to: {temp_simple_file}")
-        print("You can now use this file with transaction_lineage_analyzer.py")
-        return
-    
-    # Load the analyzer with converted data
+    # Load the analyzer directly with the full transaction CSV
+    # The analyzer can handle the full format with all 71 columns
     logger.info("Loading transaction lineage analyzer...")
-    analyzer = TransactionLineageAnalyzer(str(temp_simple_file))
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    analyzer = TransactionLineageAnalyzer(args.transaction_file)
     
     # Load vessel data if provided
     vessel_batches = None
+    vessel_details = None
     if args.vessels_file:
         vessels = load_vessels_from_json(args.vessels_file)
         if vessels:
             vessel_batches = get_on_hand_batches_from_vessels(vessels)
+            vessel_details = get_vessel_batch_details(vessels)
     
     # Generate summary report
     output_dir = Path(args.output_dir)
     summary = generate_inventory_summary_report(analyzer, vessel_batches, output_dir)
     print("\n" + summary)
     
+    # Generate vessel-batch lineage report if vessel data is available
+    if vessel_details:
+        vessel_report = generate_vessel_batch_lineage_report(vessel_details, analyzer, output_dir)
+        print("\n" + "="*100)
+        print("VESSEL-BATCH LINEAGE REPORT GENERATED")
+        print("="*100)
+        print(f"See: {output_dir / 'vessel_batch_lineage_report.txt'}")
+    
     # Export analysis data
-    export_analysis_data(analyzer, output_dir)
+    export_analysis_data(analyzer, output_dir, vessel_details)
     
     # Generate detailed reports if requested
     if args.detailed_reports:
@@ -457,6 +725,11 @@ def main():
     print("  ✓ on_hand_batch_lineage.csv - Only on-hand batches (Power BI compatible)")
     print("  ✓ all_transactions.csv - All transaction data")
     print("  ✓ complete_lineage_data.json - Complete data in JSON format")
+    if vessel_details:
+        print("  ✓ vessel_batch_lineage_report.txt - Detailed report for each vessel-batch")
+        print("  ✓ vessel_batch_losses.csv - Losses/gains for each vessel-batch (Power BI)")
+        print("  ✓ vessel_batch_sources.csv - Source lots for each vessel-batch (Power BI)")
+        print("  ✓ vessel_batch_complete.json - Complete vessel-batch data in JSON")
     if args.detailed_reports:
         print("  ✓ detailed_batch_reports/ - Individual reports for each batch")
     
