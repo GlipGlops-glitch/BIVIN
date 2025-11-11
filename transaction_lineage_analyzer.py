@@ -242,6 +242,7 @@ class BatchLineage:
         self.contributing_batches: Dict[str, float] = {}  # batch_name -> total gallons contributed
         self.contributing_transactions: List[Transaction] = []
         self.outgoing_transactions: List[Transaction] = []
+        self.losses: List[Dict] = []  # List of loss/gain records with reason
         self.current_volume = 0.0
         self.is_on_hand = False
         self.has_left_inventory = False
@@ -261,6 +262,16 @@ class BatchLineage:
             self.contributing_batches[source_batch] += gallons
         self.contributing_transactions.append(transaction)
         
+        # Track losses/gains for this transaction
+        if transaction.loss_gain_amount != 0:
+            self.losses.append({
+                'amount': transaction.loss_gain_amount,
+                'reason': transaction.loss_gain_reason,
+                'op_date': transaction.op_date,
+                'op_id': transaction.op_id,
+                'op_type': transaction.op_type
+            })
+        
     def add_outgoing_transaction(self, transaction: Transaction):
         """Add a transaction where this batch contributed to another"""
         self.outgoing_transactions.append(transaction)
@@ -273,6 +284,7 @@ class BatchLineage:
             'is_on_hand': self.is_on_hand,
             'has_left_inventory': self.has_left_inventory,
             'contributing_batches': self.contributing_batches,
+            'losses': self.losses,
             'total_contributing_batches': len(self.contributing_batches),
             'incoming_transaction_count': len(self.contributing_transactions),
             'outgoing_transaction_count': len(self.outgoing_transactions)
