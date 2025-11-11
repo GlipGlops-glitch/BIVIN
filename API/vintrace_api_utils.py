@@ -6,7 +6,7 @@ Provides helper functions for common data fetching and processing tasks.
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from .api_client import VintraceAPIClient
+from .vintrace_api_client import VintraceAPIClient
 
 
 class VintraceDataFetcher:

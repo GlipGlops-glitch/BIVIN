@@ -4,6 +4,7 @@ Pydantic models for Vintrace V6 API
 Auto-generated from vintrace-v6-apis.yaml
 """
 
+from __future__ import annotations
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 from pydantic import BaseModel, Field

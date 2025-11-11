@@ -114,6 +114,7 @@ def generate_models_file(spec: Dict[str, Any]) -> str:
     lines.append('Auto-generated from vintrace-v6-apis.yaml')
     lines.append('"""')
     lines.append('')
+    lines.append('from __future__ import annotations')
     lines.append('from typing import Optional, List, Dict, Any')
     lines.append('from datetime import date, datetime')
     lines.append('from pydantic import BaseModel, Field')
@@ -406,7 +407,7 @@ Provides helper functions for common data fetching and processing tasks.
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from .api_client import VintraceAPIClient
+from .vintrace_api_client import VintraceAPIClient
 
 
 class VintraceDataFetcher:
