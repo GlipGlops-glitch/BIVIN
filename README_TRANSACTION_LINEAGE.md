@@ -6,20 +6,49 @@ A complete Python-based system for analyzing vessel-batch transaction lineage in
 
 This system provides:
 - **Transaction lineage tracking** - Trace any batch back to all contributing source batches
+- **Pre/Post batch state tracking** - Account for batch identity changes during transactions
 - **Power BI integration** - Export data in formats ready for Power BI reporting
 - **API integration** - Fetch live transaction data from Vintrace API
 - **Flexible analysis** - Analyze on-hand inventory or completed shipments
 - **Full audit trail** - Track all operations, losses, and gains
+
+## 🆕 Pre/Post Batch State Tracking
+
+**Critical Enhancement**: The analyzer now properly tracks batch state changes during transactions.
+
+Each transaction from a vessel-batch and to a vessel-batch has:
+- **Pre-transaction state**: Batch identity and properties BEFORE the transaction
+- **Post-transaction state**: Batch identity and properties AFTER the transaction
+
+This is critical for lineage mapping because:
+- Batch names can change during operations (e.g., blending, treatments)
+- Tax states, bonding status, and ownership can change
+- The analyzer now tracks these changes to properly map lineage relationships
+
+### Example Batch State Change
+
+```
+Transaction: Transfer
+Source: 
+  - Pre: Batch A (Bonded, 14-16%)
+  - Post: -- (moved out)
+Destination:
+  - Pre: -- (empty vessel)
+  - Post: Batch B (Bonded, 14-16%)
+```
+
+The analyzer correctly tracks that Batch A contributed to Batch B, even though the batch identity changed.
 
 ## Files
 
 ### Core Analysis Scripts
 
 1. **`transaction_lineage_analyzer.py`** - Main analyzer script
-   - Loads transaction data from CSV
-   - Builds lineage relationships
+   - Loads transaction data from CSV (all 71 columns)
+   - Builds lineage relationships with pre/post batch state tracking
    - Generates reports and exports for Power BI
    - Tracks on-hand vs shipped batches
+   - Handles batch identity changes during transactions
 
 2. **`fetch_transactions_for_analysis.py`** - API integration script
    - Fetches transaction data from Vintrace API
@@ -51,14 +80,9 @@ python fetch_transactions_for_analysis.py --winery-name "Canoe Ridge Winery"
 python fetch_transactions_for_analysis.py --output my_transactions.csv
 ```
 
-**Option B: Create Your Own CSV File**
+**Option B: Use Exported CSV from Vintrace**
 
-Create a file named `Transaction_to_analysise.csv` with the following structure:
-
-```csv
-Op Date,Op Id,Op Type,From Vessel,From Batch,To Vessel,To Batch,NET,Loss/Gain Amount (gal),Loss/Gain Reason,Winery
-2024-01-15,OP-1001,Transfer,Tank-A,24CABSAUV001,Tank-B,24CABSAUV002,250.5,2.5,Evaporation,Canoe Ridge Winery
-```
+Export transaction data from Vintrace with all columns (see Data Structure section below).
 
 ### Step 2: Run the Analyzer
 
@@ -68,37 +92,72 @@ python transaction_lineage_analyzer.py
 
 ## Data Structure
 
-### Input CSV Format
+### Full CSV Format (71 Columns)
 
-The `Transaction_to_analysise.csv` file must contain these columns:
+The analyzer now supports the complete Vintrace transaction export format with all columns:
 
-| Column | Description | Example |
-|--------|-------------|---------|
-| **Op Date** | Date of operation | 2024-01-15 |
-| **Op Id** | Unique operation ID | OP-1001 |
-| **Op Type** | Type of operation | Transfer, Blend, Receipt, On-Hand, Adjustment |
-| **From Vessel** | Source vessel | Tank-A |
-| **From Batch** | Source batch name | 24CABSAUV001 |
-| **To Vessel** | Destination vessel | Tank-B |
-| **To Batch** | Destination batch name | 24CABSAUV002 |
-| **NET** | Net gallons transferred | 250.5 |
-| **Loss/Gain Amount (gal)** | Amount lost or gained | 2.5 |
-| **Loss/Gain Reason** | Reason for loss/gain | Evaporation, Racking Loss, etc. |
-| **Winery** | Winery name | Canoe Ridge Winery |
+**Key Columns for Lineage Tracking:**
+
+| Column | Description |
+|--------|-------------|
+| **Op Date** | Date of operation |
+| **Tx Id** | Transaction ID |
+| **Op Id** | Unique operation ID |
+| **Op Type** | Type of operation (Transfer, Blend, Analysis, etc.) |
+| **Src Vessel** | Source vessel name |
+| **Src Batch Pre** | Source batch name BEFORE transaction |
+| **Src Batch Post** | Source batch name AFTER transaction |
+| **Dest Vessel** | Destination vessel name |
+| **Dest Batch Pre** | Destination batch name BEFORE transaction |
+| **Dest Batch Post** | Destination batch name AFTER transaction |
+| **NET** | Net gallons transferred/changed |
+
+**Additional Tracked Properties (Pre and Post states for both Source and Destination):**
+- Tax State (Bonded, Non-declared, etc.)
+- Tax Class (Not over 14%, 14 to 16%, etc.)
+- Batch Owner
+- Batch Bond
+- Program
+- Grading
+- State (fermentation/processing state)
+- DSP Account
+- Volume
+- Alcohol %
+- Proof
+- Proof Gallons
+
+**Legacy Columns (for backward compatibility):**
+- From Vessel, From Batch, To Vessel, To Batch
+
+### Why Pre/Post Tracking Matters
+
+Many transactions change batch properties during the operation:
+- **Treatment operations** may change tax state or grading
+- **Blending** creates new batch identities
+- **Transfers** may change ownership or bonding status
+- **State changes** during fermentation affect batch classification
+
+The analyzer tracks these changes to properly map lineage relationships.
 
 ### Operation Types
 
+Common operation types in the data:
+- **Analysis** - Lab analysis operations
 - **Transfer** - Move product from one vessel to another
+- **Multi transfer (many-to-one)** - Blend multiple sources into one destination
+- **Multi transfer (one-to-many)** - Split one source into multiple destinations
+- **Multi additions** - Add multiple components to a batch
+- **Treatment (Product)** - Apply treatments that change batch properties
+- **Measurement** - Volume measurements and adjustments
 - **Blend** - Combine multiple batches into one
-- **Receipt** - Receive new product (e.g., from supplier)
-- **Adjustment** - Adjust volume (sampling, topping, etc.)
-- **On-Hand** - Current inventory snapshot
+- **Press cycle** - Pressing operations
+- **Start/Stop ferment** - Fermentation state changes
 
 ## Output Files
 
 The analyzer generates several output files in the `lineage_reports/` directory:
 
-### 1. `batch_lineage.csv` - All Lineage Relationships
+### 1. `batch_lineage.csv` - Simple Lineage Relationships
 
 Power BI ready format showing all batch relationships:
 
@@ -120,11 +179,32 @@ Destination_Batch,Source_Batch,Gallons_Contributed,Destination_Current_Volume,De
 
 Same format as above, but filtered to only batches currently on-hand.
 
-### 3. `all_transactions.csv` - All Transactions
+### 3. `detailed_lineage_with_pre_post.csv` - Detailed Lineage with Batch State Changes
 
-Complete transaction history in the original format.
+**NEW**: Enhanced export showing pre/post batch states for complete lineage tracking:
 
-### 4. `complete_lineage.json` - Complete Data
+```csv
+Destination_Batch,Op_Date,Op_Type,Src_Batch_Pre,Src_Batch_Post,Src_Batch_Changed,Dest_Batch_Pre,Dest_Batch_Post,Dest_Batch_Changed,NET,...
+```
+
+**Key Columns:**
+- All batch pre/post states for source and destination
+- Batch change flags (Yes/No)
+- Volume changes (pre, post, change amount)
+- Tax state and ownership changes
+- Complete transaction context
+
+This export is ideal for:
+- Tracking batch identity changes during operations
+- Understanding how batch properties evolved
+- Detailed lineage analysis in Power BI
+- Audit trails showing complete batch history
+
+### 4. `all_transactions.csv` - All Transactions
+
+Complete transaction history with all 71 columns from the original CSV export.
+
+### 5. `complete_lineage.json` - Complete Data
 
 Full lineage data in JSON format, including:
 - Metadata (totals, counts)

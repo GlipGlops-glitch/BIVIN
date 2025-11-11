@@ -587,6 +587,94 @@ class TransactionLineageAnalyzer:
                     writer.writerows([trans.to_dict()])
                     
         logger.info(f"Exported {len(self.transactions)} transactions")
+    
+    def export_detailed_lineage_to_csv(self, output_file: str, batch_filter: Optional[str] = None):
+        """
+        Export detailed lineage relationships to CSV with pre/post batch information
+        
+        This export includes batch state changes (pre/post) for better lineage tracking.
+        Each row represents a transaction showing how batches changed during the operation.
+        
+        Args:
+            output_file: Path to output CSV file
+            batch_filter: Optional filter - 'on-hand', 'shipped', or None for all
+        """
+        logger.info(f"Exporting detailed lineage with pre/post batch states to {output_file}")
+        
+        rows = []
+        for batch_name, lineage in self.batch_lineages.items():
+            # Apply filter
+            if batch_filter == 'on-hand' and not lineage.is_on_hand:
+                continue
+            elif batch_filter == 'shipped' and not lineage.has_left_inventory:
+                continue
+            
+            # Export each contributing transaction with detailed pre/post information
+            for trans in lineage.contributing_transactions:
+                rows.append({
+                    'Destination_Batch': batch_name,
+                    'Op_Date': trans.op_date,
+                    'Tx_Id': trans.tx_id,
+                    'Op_Id': trans.op_id,
+                    'Op_Type': trans.op_type,
+                    'Txn_Type': trans.txn_type,
+                    'Work_Order': trans.work_order,
+                    # Source batch information
+                    'Src_Vessel': trans.src_vessel,
+                    'Src_Batch_Pre': trans.src_batch_pre,
+                    'Src_Batch_Post': trans.src_batch_post,
+                    'Src_Batch_Changed': 'Yes' if (trans.src_batch_pre != trans.src_batch_post and 
+                                                     trans.src_batch_pre and trans.src_batch_post and 
+                                                     trans.src_batch_post != '--') else 'No',
+                    'Src_Vol_Pre': trans.src_vol_pre,
+                    'Src_Vol_Post': trans.src_vol_post,
+                    'Src_Vol_Change': trans.src_vol_change,
+                    'Src_Tax_State_Pre': trans.src_pre_tax_state,
+                    'Src_Tax_State_Post': trans.src_post_tax_state,
+                    'Src_Owner_Pre': trans.src_batch_pre_owner,
+                    'Src_Owner_Post': trans.src_batch_post_owner,
+                    'Src_Program_Pre': trans.src_program_pre,
+                    'Src_Program_Post': trans.src_program_post,
+                    'Src_State_Pre': trans.src_state_pre,
+                    'Src_State_Post': trans.src_state_post,
+                    # Destination batch information
+                    'Dest_Vessel': trans.dest_vessel,
+                    'Dest_Batch_Pre': trans.dest_batch_pre,
+                    'Dest_Batch_Post': trans.dest_batch_post,
+                    'Dest_Batch_Changed': 'Yes' if (trans.dest_batch_pre != trans.dest_batch_post and 
+                                                      trans.dest_batch_pre and trans.dest_batch_post and 
+                                                      trans.dest_batch_post != '--') else 'No',
+                    'Dest_Vol_Pre': trans.dest_vol_pre,
+                    'Dest_Vol_Post': trans.dest_vol_post,
+                    'Dest_Vol_Change': trans.dest_vol_change,
+                    'Dest_Tax_State_Pre': trans.dest_pre_tax_state,
+                    'Dest_Tax_State_Post': trans.dest_post_tax_state,
+                    'Dest_Owner_Pre': trans.dest_batch_pre_owner,
+                    'Dest_Owner_Post': trans.dest_batch_post_owner,
+                    'Dest_Program_Pre': trans.dest_program_pre,
+                    'Dest_Program_Post': trans.dest_program_post,
+                    'Dest_State_Pre': trans.dest_state_pre,
+                    'Dest_State_Post': trans.dest_state_post,
+                    # Transaction details
+                    'NET': trans.net,
+                    'Loss_Gain_Amount_Gal': trans.loss_gain_amount,
+                    'Loss_Gain_Amount_Proof_Gal': trans.loss_gain_amount_proof,
+                    'Loss_Gain_Reason': trans.loss_gain_reason,
+                    # Lineage context
+                    'Destination_Current_Volume': lineage.current_volume,
+                    'Destination_Is_On_Hand': lineage.is_on_hand,
+                    'Destination_Has_Left': lineage.has_left_inventory
+                })
+        
+        # Write CSV
+        if rows:
+            with open(output_file, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+            logger.info(f"Exported {len(rows)} detailed lineage records")
+        else:
+            logger.warning("No lineage relationships to export")
         
     def export_to_json(self, output_file: str):
         """
@@ -665,6 +753,9 @@ def main():
     analyzer.export_lineage_to_csv(str(output_dir / 'batch_lineage.csv'))
     analyzer.export_lineage_to_csv(str(output_dir / 'batch_lineage_on_hand.csv'), batch_filter='on-hand')
     
+    # Export detailed lineage with pre/post batch information
+    analyzer.export_detailed_lineage_to_csv(str(output_dir / 'detailed_lineage_with_pre_post.csv'))
+    
     # Export all transactions
     analyzer.export_transactions_to_csv(str(output_dir / 'all_transactions.csv'))
     
@@ -675,9 +766,10 @@ def main():
     print("EXPORTS COMPLETE")
     print(f"{'='*80}")
     print(f"Output directory: {output_dir}")
-    print(f"  - batch_lineage.csv (all lineage relationships)")
+    print(f"  - batch_lineage.csv (simple lineage relationships)")
     print(f"  - batch_lineage_on_hand.csv (only on-hand batches)")
-    print(f"  - all_transactions.csv (all transactions)")
+    print(f"  - detailed_lineage_with_pre_post.csv (lineage with batch state changes)")
+    print(f"  - all_transactions.csv (all transactions with full details)")
     print(f"  - complete_lineage.json (full data)")
     print()
 

@@ -96,3 +96,6 @@ vintrace_export_*/
 lineage_reports/
 example_exports/
 inventory_analysis_reports/
+test_lineage_exports/
+example_exports/
+lineage_reports/

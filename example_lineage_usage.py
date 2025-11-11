@@ -147,15 +147,19 @@ def example_export_for_powerbi():
     
     # All lineage relationships
     analyzer.export_lineage_to_csv('example_exports/all_lineage.csv')
-    print("✓ Exported all_lineage.csv")
+    print("✓ Exported all_lineage.csv (simple lineage)")
     
     # Only on-hand batches
     analyzer.export_lineage_to_csv('example_exports/on_hand_lineage.csv', batch_filter='on-hand')
-    print("✓ Exported on_hand_lineage.csv")
+    print("✓ Exported on_hand_lineage.csv (only on-hand)")
+    
+    # Detailed lineage with pre/post batch tracking
+    analyzer.export_detailed_lineage_to_csv('example_exports/detailed_lineage_with_pre_post.csv')
+    print("✓ Exported detailed_lineage_with_pre_post.csv (with batch state changes)")
     
     # All transactions
     analyzer.export_transactions_to_csv('example_exports/all_transactions.csv')
-    print("✓ Exported all_transactions.csv")
+    print("✓ Exported all_transactions.csv (full transaction data)")
     
     # Complete JSON
     analyzer.export_to_json('example_exports/complete_data.json')
@@ -164,6 +168,54 @@ def example_export_for_powerbi():
     print("\nFiles ready for Power BI import!")
     print()
 
+
+def example_batch_state_changes():
+    """Show examples of batch state changes during transactions"""
+    print("="*80)
+    print("EXAMPLE 9: Batch State Changes During Transactions")
+    print("="*80)
+    
+    analyzer = TransactionLineageAnalyzer('Transaction_to_analysise.csv')
+    
+    print("\nFinding transactions where batch identity changed...\n")
+    
+    # Find examples of batch state changes
+    changes_found = 0
+    for trans in analyzer.transactions:
+        # Check if source batch changed
+        src_changed = (trans.src_batch_pre != trans.src_batch_post and 
+                      trans.src_batch_pre and trans.src_batch_post and 
+                      trans.src_batch_post != '--')
+        
+        # Check if destination batch changed
+        dest_changed = (trans.dest_batch_pre != trans.dest_batch_post and 
+                       trans.dest_batch_pre and trans.dest_batch_post and 
+                       trans.dest_batch_post != '--')
+        
+        if src_changed or dest_changed:
+            changes_found += 1
+            if changes_found <= 5:  # Show first 5 examples
+                print(f"Example {changes_found}:")
+                print(f"  Date: {trans.op_date}")
+                print(f"  Op Type: {trans.op_type}")
+                print(f"  Op ID: {trans.op_id}")
+                
+                if src_changed:
+                    print(f"  Source batch changed:")
+                    print(f"    Pre:  {trans.src_batch_pre} ({trans.src_pre_tax_state})")
+                    print(f"    Post: {trans.src_batch_post} ({trans.src_post_tax_state})")
+                    
+                if dest_changed:
+                    print(f"  Destination batch changed:")
+                    print(f"    Pre:  {trans.dest_batch_pre} ({trans.dest_pre_tax_state})")
+                    print(f"    Post: {trans.dest_batch_post} ({trans.dest_post_tax_state})")
+                
+                print(f"  NET: {trans.net} gallons")
+                print()
+    
+    print(f"Total transactions with batch identity changes: {changes_found}")
+    print("This demonstrates why pre/post batch tracking is critical for accurate lineage!")
+    print()
 
 def example_trace_batch_history():
     """Trace the complete history of a batch"""
@@ -212,6 +264,7 @@ def main():
     example_generate_report()
     example_analyze_losses()
     example_trace_batch_history()
+    example_batch_state_changes()  # NEW: Show batch state changes
     
     # Create export directory for last example
     import os
