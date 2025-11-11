@@ -8,10 +8,16 @@ the full history of any vessel-batch.
 
 Features:
 - Load transaction data from CSV files
-- Track lineage from source batches to destination batches
+- Track lineage from source batches to destination batches using Src Vol Change and Dest Vol Change
+- Accurate gallon tracking accounting for losses/gains during transfers
 - Generate reports showing all contributing batches to a final product
 - Export data in Power BI compatible formats (CSV, JSON)
 - Support for various transaction types: Transfer, Blend, Adjustment, Receipt, On-Hand
+
+Volume Tracking:
+- Uses Src Vol Change (gallons leaving source) and Dest Vol Change (gallons arriving at destination)
+- NET field is preserved but not used for lineage tracking as it often equals 0
+- Properly accounts for losses/gains between source and destination
 
 Usage:
     python transaction_lineage_analyzer.py
@@ -318,10 +324,16 @@ class TransactionLineageAnalyzer:
     def _build_lineage(self):
         """Build the lineage relationships from transactions
         
-        This method now accounts for pre/post batch states:
+        This method accounts for:
+        - Pre/post batch states (batch identity can change during transactions)
+        - Volume changes using Src Vol Change and Dest Vol Change for accurate gallon tracking
         - Source batches may have different pre/post names (Src Batch Pre/Post)
         - Destination batches may have different pre/post names (Dest Batch Pre/Post)
-        - Batch identity can change during a transaction
+        
+        Volume Tracking:
+        - Uses Dest Vol Change for incoming transactions (gallons arriving at destination)
+        - Uses Src Vol Change for adjustments when Dest Vol Change is 0
+        - NET field is not used for lineage tracking as it often equals 0
         """
         logger.info("Building lineage relationships...")
         
