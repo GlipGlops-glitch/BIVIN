@@ -358,7 +358,7 @@ async def download_fruit_report(page: Page, vessel_name: str):
         
         for selector in all_option_selectors:
             try:
-                await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="attached")
+                await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="visible")
                 all_option = await iframe.query_selector(selector)
                 
                 if all_option:
