@@ -42,35 +42,189 @@ class Transaction:
     """Represents a single transaction/operation"""
     
     def __init__(self, data: Dict):
+        # Basic transaction info
         self.op_date = data.get('Op Date', '')
+        self.tx_id = data.get('Tx Id', '')
         self.op_id = data.get('Op Id', '')
+        self.work_order = data.get('Work Order', '')
+        self.txn_type = data.get('Txn Type', '')
         self.op_type = data.get('Op Type', '')
-        self.from_vessel = data.get('From Vessel', '')
-        self.from_batch = data.get('From Batch', '')
-        self.to_vessel = data.get('To Vessel', '')
-        self.to_batch = data.get('To Batch', '')
-        self.net = float(data.get('NET', 0))
-        self.loss_gain_amount = float(data.get('Loss/Gain Amount (gal)', 0))
+        self.reversed = data.get('Reversed', '')
+        self.operator = data.get('Operator', '')
+        self.date_entered = data.get('Date Entered', '')
+        self.entered_by = data.get('Entered By', '')
+        
+        # Source vessel and batch information (Pre and Post states)
+        self.src_vessel = data.get('Src Vessel', '')
+        self.src_batch_pre = data.get('Src Batch Pre', '')
+        self.src_pre_tax_state = data.get('Src Pre Tax State', '')
+        self.src_pre_tax_class = data.get('Src Pre Tax Class', '')
+        self.src_batch_pre_owner = data.get('Src Batch Pre Owner', '')
+        self.src_batch_pre_bond = data.get('Src Batch Pre Bond', '')
+        self.src_program_pre = data.get('Src Program Pre', '')
+        self.src_grading_pre = data.get('Src Grading Pre', '')
+        self.src_state_pre = data.get('Src State Pre', '')
+        self.src_dsp_account_pre = data.get('Src DSP Account Pre', '')
+        self.src_vol_pre = self._safe_float(data.get('Src Vol Pre', 0))
+        
+        self.src_batch_post = data.get('Src Batch Post', '')
+        self.src_post_tax_state = data.get('Src Post Tax State', '')
+        self.src_post_tax_class = data.get('Src Post Tax Class', '')
+        self.src_batch_post_owner = data.get('Src Batch Post Owner', '')
+        self.src_batch_post_bond = data.get('Src Batch Post Bond', '')
+        self.src_program_post = data.get('Src Program Post', '')
+        self.src_grading_post = data.get('Src Grading Post', '')
+        self.src_state_post = data.get('Src State Post', '')
+        self.src_dsp_account_post = data.get('Src DSP Account Post', '')
+        self.src_vol_post = self._safe_float(data.get('Src Vol Post', 0))
+        self.src_vol_change = self._safe_float(data.get('Src Vol Change', 0))
+        
+        # Source alcohol and proof information
+        self.src_alcohol_pre = self._safe_float(data.get('Src Alcohol Pre', 0))
+        self.src_proof_pre = self._safe_float(data.get('Src Proof Pre', 0))
+        self.src_proof_gallons_pre = self._safe_float(data.get('Src Proof Gallons Pre', 0))
+        self.src_alcohol_post = self._safe_float(data.get('Src Alcohol Post', 0))
+        self.src_proof_post = self._safe_float(data.get('Src Proof Post', 0))
+        self.src_proof_gallons_post = self._safe_float(data.get('Src Proof Gallons Post', 0))
+        self.src_vol_proof_gal_change = self._safe_float(data.get('Src Vol Proof Gal Change', 0))
+        
+        # Destination vessel and batch information (Pre and Post states)
+        self.dest_vessel = data.get('Dest Vessel', '')
+        self.dest_batch_pre = data.get('Dest Batch Pre', '')
+        self.dest_pre_tax_state = data.get('Dest Pre Tax State', '')
+        self.dest_pre_tax_class = data.get('Dest Pre Tax Class', '')
+        self.dest_batch_pre_owner = data.get('Dest Batch Pre Owner', '')
+        self.dest_batch_pre_bond = data.get('Dest Batch Pre Bond', '')
+        self.dest_program_pre = data.get('Dest Program Pre', '')
+        self.dest_grading_pre = data.get('Dest Grading Pre', '')
+        self.dest_state_pre = data.get('Dest State Pre', '')
+        self.dest_dsp_account_pre = data.get('Dest DSP Account Pre', '')
+        self.dest_vol_pre = self._safe_float(data.get('Dest Vol Pre', 0))
+        
+        self.dest_batch_post = data.get('Dest Batch Post', '')
+        self.dest_post_tax_state = data.get('Dest Post Tax State', '')
+        self.dest_post_tax_class = data.get('Dest Post Tax Class', '')
+        self.dest_batch_post_owner = data.get('Dest Batch Post Owner', '')
+        self.dest_batch_post_bond = data.get('Dest Batch Post Bond', '')
+        self.dest_program_post = data.get('Dest Program Post', '')
+        self.dest_grading_post = data.get('Dest Grading Post', '')
+        self.dest_state_post = data.get('Dest State Post', '')
+        self.dest_dsp_account_post = data.get('Dest DSP Account Post', '')
+        self.dest_vol_post = self._safe_float(data.get('Dest Vol Post', 0))
+        self.dest_vol_change = self._safe_float(data.get('Dest Vol Change', 0))
+        
+        # Destination alcohol and proof information
+        self.dest_alcohol_pre = self._safe_float(data.get('Dest Alcohol Pre', 0))
+        self.dest_proof_pre = self._safe_float(data.get('Dest Proof Pre', 0))
+        self.dest_proof_gallons_pre = self._safe_float(data.get('Dest Proof Gallons Pre', 0))
+        self.dest_alcohol_post = self._safe_float(data.get('Dest Alcohol Post', 0))
+        self.dest_proof_post = self._safe_float(data.get('Dest Proof Post', 0))
+        self.dest_proof_gallons_post = self._safe_float(data.get('Dest Proof Gallons Post', 0))
+        self.dest_vol_proof_gal_change = self._safe_float(data.get('Dest Vol Proof Gal Change', 0))
+        
+        # Loss/Gain information
+        self.loss_gain_amount = self._safe_float(data.get('Loss/Gain Amount (gal)', 0))
+        self.loss_gain_amount_proof = self._safe_float(data.get('Loss/Gain Amount (proof gal)', 0))
         self.loss_gain_reason = data.get('Loss/Gain Reason', '')
+        self.net = self._safe_float(data.get('NET', 0))
+        
+        # Legacy fields for backward compatibility
+        self.from_vessel = data.get('From Vessel', '') or self.src_vessel
+        self.from_batch = data.get('From Batch', '') or self.src_batch_pre
+        self.to_vessel = data.get('To Vessel', '') or self.dest_vessel
+        self.to_batch = data.get('To Batch', '') or self.dest_batch_post
         self.winery = data.get('Winery', '')
+    
+    @staticmethod
+    def _safe_float(value) -> float:
+        """Safely convert value to float, handling empty strings and None"""
+        if value is None or value == '':
+            return 0.0
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
         
     def __repr__(self):
-        return f"Transaction({self.op_id}: {self.from_batch} -> {self.to_batch}, {self.net} gal)"
+        src_batch = self.src_batch_pre or self.from_batch
+        dest_batch = self.dest_batch_post or self.to_batch
+        return f"Transaction({self.op_id}: {src_batch} -> {dest_batch}, {self.net} gal)"
     
     def to_dict(self) -> Dict:
         """Convert transaction to dictionary"""
         return {
             'Op Date': self.op_date,
+            'Tx Id': self.tx_id,
             'Op Id': self.op_id,
+            'Work Order': self.work_order,
+            'Txn Type': self.txn_type,
             'Op Type': self.op_type,
-            'From Vessel': self.from_vessel,
-            'From Batch': self.from_batch,
-            'To Vessel': self.to_vessel,
-            'To Batch': self.to_batch,
-            'NET': self.net,
+            'Reversed': self.reversed,
+            'Operator': self.operator,
+            'Date Entered': self.date_entered,
+            'Entered By': self.entered_by,
+            'Src Vessel': self.src_vessel,
+            'Src Batch Pre': self.src_batch_pre,
+            'Src Pre Tax State': self.src_pre_tax_state,
+            'Src Pre Tax Class': self.src_pre_tax_class,
+            'Src Batch Pre Owner': self.src_batch_pre_owner,
+            'Src Batch Pre Bond': self.src_batch_pre_bond,
+            'Src Program Pre': self.src_program_pre,
+            'Src Grading Pre': self.src_grading_pre,
+            'Src State Pre': self.src_state_pre,
+            'Src DSP Account Pre': self.src_dsp_account_pre,
+            'Src Vol Pre': self.src_vol_pre,
+            'Src Batch Post': self.src_batch_post,
+            'Src Post Tax State': self.src_post_tax_state,
+            'Src Post Tax Class': self.src_post_tax_class,
+            'Src Batch Post Owner': self.src_batch_post_owner,
+            'Src Batch Post Bond': self.src_batch_post_bond,
+            'Src Program Post': self.src_program_post,
+            'Src Grading Post': self.src_grading_post,
+            'Src State Post': self.src_state_post,
+            'Src DSP Account Post': self.src_dsp_account_post,
+            'Src Vol Post': self.src_vol_post,
+            'Src Vol Change': self.src_vol_change,
+            'Src Alcohol Pre': self.src_alcohol_pre,
+            'Src Proof Pre': self.src_proof_pre,
+            'Src Proof Gallons Pre': self.src_proof_gallons_pre,
+            'Src Alcohol Post': self.src_alcohol_post,
+            'Src Proof Post': self.src_proof_post,
+            'Src Proof Gallons Post': self.src_proof_gallons_post,
+            'Src Vol Proof Gal Change': self.src_vol_proof_gal_change,
+            'Dest Vessel': self.dest_vessel,
+            'Dest Batch Pre': self.dest_batch_pre,
+            'Dest Pre Tax State': self.dest_pre_tax_state,
+            'Dest Pre Tax Class': self.dest_pre_tax_class,
+            'Dest Batch Pre Owner': self.dest_batch_pre_owner,
+            'Dest Batch Pre Bond': self.dest_batch_pre_bond,
+            'Dest Program Pre': self.dest_program_pre,
+            'Dest Grading Pre': self.dest_grading_pre,
+            'Dest State Pre': self.dest_state_pre,
+            'Dest DSP Account Pre': self.dest_dsp_account_pre,
+            'Dest Vol Pre': self.dest_vol_pre,
+            'Dest Batch Post': self.dest_batch_post,
+            'Dest Post Tax State': self.dest_post_tax_state,
+            'Dest Post Tax Class': self.dest_post_tax_class,
+            'Dest Batch Post Owner': self.dest_batch_post_owner,
+            'Dest Batch Post Bond': self.dest_batch_post_bond,
+            'Dest Program Post': self.dest_program_post,
+            'Dest Grading Post': self.dest_grading_post,
+            'Dest State Post': self.dest_state_post,
+            'Dest DSP Account Post': self.dest_dsp_account_post,
+            'Dest Vol Post': self.dest_vol_post,
+            'Dest Vol Change': self.dest_vol_change,
+            'Dest Alcohol Pre': self.dest_alcohol_pre,
+            'Dest Proof Pre': self.dest_proof_pre,
+            'Dest Proof Gallons Pre': self.dest_proof_gallons_pre,
+            'Dest Alcohol Post': self.dest_alcohol_post,
+            'Dest Proof Post': self.dest_proof_post,
+            'Dest Proof Gallons Post': self.dest_proof_gallons_post,
+            'Dest Vol Proof Gal Change': self.dest_vol_proof_gal_change,
             'Loss/Gain Amount (gal)': self.loss_gain_amount,
+            'Loss/Gain Amount (proof gal)': self.loss_gain_amount_proof,
             'Loss/Gain Reason': self.loss_gain_reason,
-            'Winery': self.winery
+            'NET': self.net
         }
 
 
@@ -87,8 +241,14 @@ class BatchLineage:
         self.has_left_inventory = False
         
     def add_incoming_transaction(self, transaction: Transaction, gallons: float):
-        """Add a transaction that contributed to this batch"""
-        source_batch = transaction.from_batch
+        """Add a transaction that contributed to this batch
+        
+        Now accounts for pre/post batch states:
+        - Uses src_batch_pre as the source batch for lineage tracking
+        - Tracks the actual contributing batch properly
+        """
+        # Use the pre-transaction source batch name for lineage tracking
+        source_batch = transaction.src_batch_pre or transaction.from_batch
         if source_batch and source_batch != self.batch_name:
             if source_batch not in self.contributing_batches:
                 self.contributing_batches[source_batch] = 0.0
@@ -156,12 +316,31 @@ class TransactionLineageAnalyzer:
             raise
             
     def _build_lineage(self):
-        """Build the lineage relationships from transactions"""
+        """Build the lineage relationships from transactions
+        
+        This method now accounts for pre/post batch states:
+        - Source batches may have different pre/post names (Src Batch Pre/Post)
+        - Destination batches may have different pre/post names (Dest Batch Pre/Post)
+        - Batch identity can change during a transaction
+        """
         logger.info("Building lineage relationships...")
         
-        # First pass: create all batch lineage objects
+        # First pass: create all batch lineage objects for all batch variants
         all_batches = set()
         for trans in self.transactions:
+            # Add source batch variants (pre and post states)
+            if trans.src_batch_pre:
+                all_batches.add(trans.src_batch_pre)
+            if trans.src_batch_post:
+                all_batches.add(trans.src_batch_post)
+            
+            # Add destination batch variants (pre and post states)
+            if trans.dest_batch_pre:
+                all_batches.add(trans.dest_batch_pre)
+            if trans.dest_batch_post:
+                all_batches.add(trans.dest_batch_post)
+            
+            # Add legacy field values for backward compatibility
             if trans.from_batch:
                 all_batches.add(trans.from_batch)
             if trans.to_batch:
@@ -172,31 +351,53 @@ class TransactionLineageAnalyzer:
             
         # Second pass: populate lineage relationships
         for trans in self.transactions:
-            to_batch = trans.to_batch
-            from_batch = trans.from_batch
+            # Determine actual source and destination batches
+            # For lineage tracking, we use:
+            # - Source: the pre-transaction batch (what it was called before)
+            # - Destination: the post-transaction batch (what it's called after)
+            src_batch = trans.src_batch_pre or trans.from_batch
+            dest_batch = trans.dest_batch_post or trans.to_batch
+            
+            # Also track if batch identity changed during transaction
+            src_batch_post = trans.src_batch_post or trans.from_batch
+            dest_batch_pre = trans.dest_batch_pre or trans.to_batch
             
             # Handle different operation types
             if trans.op_type == 'On-Hand':
                 # This batch is currently in inventory
-                if to_batch in self.batch_lineages:
-                    self.batch_lineages[to_batch].is_on_hand = True
-                    self.batch_lineages[to_batch].current_volume = trans.net
+                # Use the post-transaction batch name as that's the current state
+                current_batch = dest_batch or dest_batch_pre
+                if current_batch and current_batch in self.batch_lineages:
+                    self.batch_lineages[current_batch].is_on_hand = True
+                    self.batch_lineages[current_batch].current_volume = trans.net
                     
             elif trans.op_type in ['Transfer', 'Blend', 'Receipt']:
                 # Material moved from one batch to another
-                if to_batch and to_batch in self.batch_lineages:
-                    self.batch_lineages[to_batch].add_incoming_transaction(trans, trans.net)
+                # Track lineage from source to destination
+                if dest_batch and dest_batch in self.batch_lineages:
+                    self.batch_lineages[dest_batch].add_incoming_transaction(trans, abs(trans.net))
                     
-                if from_batch and from_batch in self.batch_lineages:
-                    self.batch_lineages[from_batch].add_outgoing_transaction(trans)
+                if src_batch and src_batch in self.batch_lineages:
+                    self.batch_lineages[src_batch].add_outgoing_transaction(trans)
                     # Mark that this batch has left (at least partially)
                     if trans.op_type != 'Receipt':  # Receipts don't indicate leaving
-                        self.batch_lineages[from_batch].has_left_inventory = True
+                        self.batch_lineages[src_batch].has_left_inventory = True
+                
+                # If batch identity changed during transaction, track that relationship
+                if src_batch_post and src_batch_post != src_batch and src_batch_post in self.batch_lineages:
+                    # Source batch changed its name, track the outgoing from the new name too
+                    self.batch_lineages[src_batch_post].add_outgoing_transaction(trans)
+                    
+                if dest_batch_pre and dest_batch_pre != dest_batch and dest_batch_pre in self.batch_lineages:
+                    # Destination batch had a different name before, track incoming to the old name too
+                    self.batch_lineages[dest_batch_pre].add_incoming_transaction(trans, abs(trans.net))
                         
-            elif trans.op_type == 'Adjustment':
-                # Adjustments affect the batch but don't indicate movement
-                if to_batch and to_batch in self.batch_lineages:
-                    self.batch_lineages[to_batch].add_incoming_transaction(trans, trans.net)
+            elif trans.op_type in ['Adjustment', 'Measurement', 'Treatment', 'Analysis']:
+                # Adjustments, measurements, treatments affect the batch but may not indicate movement
+                # These can change batch properties (tax state, grading, etc.) without moving volume
+                target_batch = dest_batch or dest_batch_pre or src_batch_post or src_batch
+                if target_batch and target_batch in self.batch_lineages:
+                    self.batch_lineages[target_batch].add_incoming_transaction(trans, abs(trans.net))
                     
         logger.info(f"Built lineage for {len(self.batch_lineages)} batches")
         
