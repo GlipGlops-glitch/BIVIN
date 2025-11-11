@@ -313,7 +313,7 @@ async def download_fruit_report(page: Page, vessel_name: str):
                 
                 # Hover to show submenu
                 await excel_item.hover()
-                await asyncio.sleep(1)  # Wait for submenu to appear
+                await asyncio.sleep(1.5)  # Wait for submenu to appear
                 print(f"✓ Hovered over 'Excel' menu item using selector: {selector}")
                 track_selector("download_fruit_report", selector, "css", "excel_menu", "Excel menu item")
                 excel_clicked = True
@@ -326,7 +326,7 @@ async def download_fruit_report(page: Page, vessel_name: str):
         await save_debug_screenshot(page, f"excel_menu_error_{vessel_name}")
         return False
     
-    # Step 4: Click "All" option
+    # Step 4: Click "All" option with retry mechanism
     print("📥 Clicking 'All' option to download...")
     
     all_option_selectors = [
@@ -337,52 +337,84 @@ async def download_fruit_report(page: Page, vessel_name: str):
     ]
     
     download_started = False
-    for selector in all_option_selectors:
-        try:
-            await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="attached")
-            all_option = await iframe.query_selector(selector)
-            
-            if all_option:
-                is_visible = await all_option.is_visible()
-                if not is_visible:
-                    print(f"  ⚠ 'All' option found but not visible with selector: {selector}")
-                    await asyncio.sleep(1)
+    max_attempts = 2
+    
+    for attempt in range(1, max_attempts + 1):
+        print(f"📥 Attempt {attempt}/{max_attempts} to click 'All' option...")
+        
+        # Re-hover over Excel menu if this is a retry attempt
+        if attempt > 1:
+            print(f"🔄 Re-hovering over Excel menu before attempt {attempt}...")
+            for selector in excel_menu_selectors:
+                try:
+                    excel_item = await iframe.query_selector(selector)
+                    if excel_item:
+                        await excel_item.hover()
+                        await asyncio.sleep(1.5)  # Wait for submenu to reappear
+                        print(f"✓ Re-hovered over 'Excel' menu item for attempt {attempt}")
+                        break
+                except Exception as e:
+                    continue
+        
+        for selector in all_option_selectors:
+            try:
+                await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="attached")
+                all_option = await iframe.query_selector(selector)
+                
+                if all_option:
                     is_visible = await all_option.is_visible()
                     if not is_visible:
-                        print(f"  ✗ 'All' option still not visible after wait")
-                        continue
-                
-                await all_option.scroll_into_view_if_needed()
-                await asyncio.sleep(0.5)
-                
-                # Set up download listener on the PAGE (not iframe) before clicking
-                async with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
-                    await all_option.click(force=True)
-                    print(f"✓ Clicked 'All' option using selector: {selector}")
-                    track_selector("download_fruit_report", selector, "css", "all_option", "All option for fruit export")
-                
-                # Wait for download to complete
-                download = await download_info.value
-                temp_path = await download.path()
-                
-                # Save with vessel name
-                sanitized_name = sanitize_filename(vessel_name)
-                final_path = os.path.join(FRUIT_REPORTS_DIR, f"{sanitized_name}.csv")
-                
-                if os.path.exists(final_path):
-                    os.remove(final_path)
-                
-                shutil.move(temp_path, final_path)
-                print(f"✓ Downloaded and saved fruit report to: {final_path}")
-                download_started = True
-                return True
-                
-        except Exception as e:
-            print(f"  ✗ Failed with selector '{selector}': {e}")
-            continue
+                        print(f"  ⚠ Attempt {attempt}: 'All' option found but not visible with selector: {selector}")
+                        await asyncio.sleep(1)
+                        is_visible = await all_option.is_visible()
+                        if not is_visible:
+                            print(f"  ✗ Attempt {attempt}: 'All' option still not visible after wait")
+                            continue
+                    
+                    await all_option.scroll_into_view_if_needed()
+                    await asyncio.sleep(0.5)
+                    
+                    # Set up download listener on the PAGE (not iframe) before clicking
+                    try:
+                        async with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
+                            await all_option.click(force=True)
+                            print(f"✓ Attempt {attempt}: Clicked 'All' option using selector: {selector}")
+                            track_selector("download_fruit_report", selector, "css", "all_option", "All option for fruit export")
+                        
+                        # Wait for download to complete
+                        download = await download_info.value
+                        temp_path = await download.path()
+                        
+                        # Save with vessel name
+                        sanitized_name = sanitize_filename(vessel_name)
+                        final_path = os.path.join(FRUIT_REPORTS_DIR, f"{sanitized_name}.csv")
+                        
+                        if os.path.exists(final_path):
+                            os.remove(final_path)
+                        
+                        shutil.move(temp_path, final_path)
+                        print(f"✓ Downloaded and saved fruit report to: {final_path}")
+                        download_started = True
+                        return True
+                    except Exception as download_error:
+                        print(f"  ⚠ Attempt {attempt}: Download timeout or error with selector '{selector}': {download_error}")
+                        if attempt < max_attempts:
+                            print(f"  🔄 Will retry (attempt {attempt + 1}/{max_attempts})...")
+                            break  # Break from selector loop to retry with re-hover
+                        else:
+                            print(f"  ✗ Final attempt {attempt} failed")
+                            continue
+                    
+            except Exception as e:
+                print(f"  ✗ Attempt {attempt}: Failed with selector '{selector}': {e}")
+                continue
+        
+        # If download started successfully, exit the retry loop
+        if download_started:
+            break
     
     if not download_started:
-        print("❌ ERROR: Could not click 'All' option or download failed")
+        print(f"❌ ERROR: Could not click 'All' option or download failed after {max_attempts} attempts")
         await save_debug_screenshot(page, f"download_all_error_{vessel_name}")
         return False
     
