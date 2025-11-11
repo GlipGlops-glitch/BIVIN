@@ -91,3 +91,7 @@ vintrace_products_*.csv
 stock_*_details.json
 transactions_*.json
 vintrace_export_*/
+
+# Transaction lineage analysis outputs
+lineage_reports/
+example_exports/
