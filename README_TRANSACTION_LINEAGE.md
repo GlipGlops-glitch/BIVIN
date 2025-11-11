@@ -26,32 +26,16 @@ This system provides:
    - Converts API format to analysis CSV format
    - Supports filtering by date, batch, owner, winery
 
-3. **`Transaction_to_analysise.csv`** - Sample transaction data
-   - Example transaction data with proper structure
-   - Use as template for manual data entry
-   - Can be replaced with API-fetched data
-
 ## Quick Start
 
-### Option 1: Analyze Existing CSV Data
+### Step 1: Get Your Transaction Data
 
-If you have a `Transaction_to_analysise.csv` file:
+You need a CSV file with transaction data. You have two options:
 
-```bash
-python transaction_lineage_analyzer.py
-```
-
-This will:
-- Load all transactions from the CSV
-- Build lineage relationships
-- Generate reports in `lineage_reports/` directory
-
-### Option 2: Fetch from Vintrace API
-
-To fetch fresh transaction data from Vintrace:
+**Option A: Fetch from Vintrace API (Recommended)**
 
 ```bash
-# Fetch last 30 days of transactions
+# Fetch last 30 days of transactions (creates Transaction_to_analysise.csv)
 python fetch_transactions_for_analysis.py
 
 # Fetch specific date range
@@ -62,9 +46,21 @@ python fetch_transactions_for_analysis.py --batch-name "24CABSAUV*"
 
 # Filter by winery
 python fetch_transactions_for_analysis.py --winery-name "Canoe Ridge Winery"
+
+# Specify custom output file
+python fetch_transactions_for_analysis.py --output my_transactions.csv
 ```
 
-Then run the analyzer:
+**Option B: Create Your Own CSV File**
+
+Create a file named `Transaction_to_analysise.csv` with the following structure:
+
+```csv
+Op Date,Op Id,Op Type,From Vessel,From Batch,To Vessel,To Batch,NET,Loss/Gain Amount (gal),Loss/Gain Reason,Winery
+2024-01-15,OP-1001,Transfer,Tank-A,24CABSAUV001,Tank-B,24CABSAUV002,250.5,2.5,Evaporation,Canoe Ridge Winery
+```
+
+### Step 2: Run the Analyzer
 
 ```bash
 python transaction_lineage_analyzer.py
