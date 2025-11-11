@@ -1,5 +1,5 @@
 
-# python tools/melt_vessels.py
+# python BI/tools/melt_vessels.py
 
 
 import os

@@ -6,7 +6,7 @@ Usage: python tools/vintrace_Grape_Report_with_bookingSummary_playwright.py
 
 Author: GlipGlops-glitch
 Created: 2025-01-10
-Last Updated: 2025-01-10
+Last Updated: 2025-01-11
 """
 
 import os
@@ -23,14 +23,15 @@ from vintrace_helpers import (
     initialize_browser,
     navigate_to_reports_old_ui,
     click_vintage_harvest_tab_old_ui,
-    cleanup_and_generate_report,
     save_debug_screenshot,
+    track_selector,
+    get_sorted_selectors,
     DOWNLOAD_TIMEOUT_MS,
     LARGE_TIMEOUT
 )
 
-# Import selector tracking
-from selector_tracker import track_selector
+# Import centralized selectors
+from vintrace_selectors import ReportSelectors, OldUISelectors
 
 # ============================================================================
 # CONSTANTS
@@ -71,6 +72,9 @@ async def find_grape_delivery_section(page: Page):
     """
     print("\n🔍 Looking for 'Grape Delivery Report' section...")
     
+    # Use centralized report strip selector
+    report_strip_selector = OldUISelectors.REPORT_STRIP
+    
     # Strategy 1: Find by exact text in span
     try:
         label = await page.query_selector("xpath=//span[normalize-space(text())='Grape Delivery Report']")
@@ -106,18 +110,21 @@ async def find_grape_delivery_section(page: Page):
         ":text('Grape Delivery Report')",
     ]
     
+    # Sort selectors by historical success
+    text_selectors = get_sorted_selectors("find_grape_delivery_section", text_selectors)
+    
     for selector in text_selectors:
         try:
             label = await page.wait_for_selector(selector, timeout=3000)
             if label:
-                section = await label.evaluate_handle("""
-                    el => {
+                section = await label.evaluate_handle(f"""
+                    el => {{
                         let node = el.parentElement;
-                        while(node && !node.classList.contains('reportStrip')) {
+                        while(node && !node.classList.contains('reportStrip')) {{
                             node = node.parentElement;
-                        }
+                        }}
                         return node;
-                    }
+                    }}
                 """)
                 
                 if await section.evaluate("node => !!node"):
@@ -151,7 +158,8 @@ async def select_csv_in_dropdown_within(section):
     print("📄 Selecting CSV format...")
     
     try:
-        selects = await section.query_selector_all("select")
+        # Use centralized format dropdown selector
+        selects = await section.query_selector_all(ReportSelectors.FORMAT_DROPDOWN)
         
         for sel in selects:
             options = await sel.query_selector_all("option")
@@ -169,7 +177,7 @@ async def select_csv_in_dropdown_within(section):
                     print("✓ Selected 'CSV' format in dropdown")
                     track_selector(
                         "select_csv_in_dropdown_within",
-                        "select option[text='CSV']",
+                        ReportSelectors.FORMAT_DROPDOWN,
                         "css",
                         "csv_format_option",
                         "CSV format option in Grape Delivery Report dropdown"
@@ -197,6 +205,12 @@ async def set_checkbox_by_text_within(section, label_text: str, checked: bool):
         bool: True if checkbox was set, False otherwise
     """
     print(f"☑️  Setting checkbox '{label_text}' to: {checked}")
+    
+    # Use centralized checkbox selectors
+    checkbox_selectors = [
+        OldUISelectors.CHECKBOX_IMAGE,
+        OldUISelectors.CHECKBOX_STATE_ICON
+    ]
     
     # Complex xpath for finding checkbox by label
     xpath = f".//div[contains(@class, 'checkbox-text')]//td[normalize-space(text())='{label_text}']/preceding-sibling::td[contains(@id, '_1')]/img | .//div[contains(@class, 'checkbox-text')]//*[text()[normalize-space()='{label_text}']]/ancestor::div[contains(@class, 'checkbox-text')]//img[contains(@id, '_stateicon')]"
@@ -258,7 +272,8 @@ async def select_option_by_text_within(section, option_text: str):
     print(f"🔽 Selecting option: '{option_text}'")
     
     try:
-        selects = await section.query_selector_all("select")
+        # Use centralized format dropdown selector
+        selects = await section.query_selector_all(ReportSelectors.FORMAT_DROPDOWN)
         
         for sel in selects:
             options = await sel.query_selector_all("option")
@@ -276,7 +291,7 @@ async def select_option_by_text_within(section, option_text: str):
                     print(f"✓ Selected '{option_text}' from dropdown")
                     track_selector(
                         "select_option_by_text_within",
-                        f"select option[text='{option_text}']",
+                        ReportSelectors.FORMAT_DROPDOWN,
                         "css",
                         f"option_{option_text.replace(' ', '_')}",
                         f"Dropdown option: {option_text}"
@@ -303,45 +318,31 @@ async def click_generate_button_within(section):
     """
     print("🔘 Clicking 'Generate...' button...")
     
-    # Strategy 1: CSS selector
-    css_selector = "button:has-text('Generate...'), input[type='button'][value*='Generate']"
-    try:
-        btn = await section.query_selector(css_selector)
-        if btn:
-            await btn.scroll_into_view_if_needed()
-            await asyncio.sleep(0.3)
-            await btn.click()
-            print("✓ Clicked 'Generate...' button")
-            track_selector(
-                "click_generate_button_within",
-                css_selector,
-                "css",
-                "generate_button",
-                "Generate button in Grape Delivery Report"
-            )
-            return True
-    except Exception as e:
-        print(f"  ✗ CSS selector failed: {e}")
+    # Use centralized selectors from vintrace_selectors.py
+    generate_selectors = OldUISelectors.GENERATE_BUTTON.copy()
     
-    # Strategy 2: XPath
-    xpath_selector = ".//button[normalize-space(text())='Generate...']"
-    try:
-        btn = await section.query_selector(f"xpath={xpath_selector}")
-        if btn:
-            await btn.scroll_into_view_if_needed()
-            await asyncio.sleep(0.3)
-            await btn.click()
-            print("✓ Clicked 'Generate...' button (xpath)")
-            track_selector(
-                "click_generate_button_within",
-                xpath_selector,
-                "xpath",
-                "generate_button",
-                "Generate button in Grape Delivery Report (xpath)"
-            )
-            return True
-    except Exception as e:
-        print(f"  ✗ XPath selector failed: {e}")
+    # Sort by historical success
+    generate_selectors = get_sorted_selectors("click_generate_button_within", generate_selectors)
+    
+    for selector in generate_selectors:
+        try:
+            btn = await section.query_selector(selector)
+            if btn:
+                await btn.scroll_into_view_if_needed()
+                await asyncio.sleep(0.3)
+                await btn.click()
+                print(f"✓ Clicked 'Generate...' button using selector: {selector}")
+                track_selector(
+                    "click_generate_button_within",
+                    selector,
+                    "css",
+                    "generate_button",
+                    "Generate button in Grape Delivery Report"
+                )
+                return True
+        except Exception as e:
+            print(f"  ✗ Failed with selector '{selector}': {e}")
+            continue
     
     print("❌ Could not find or click 'Generate...' button")
     return False
@@ -529,8 +530,10 @@ async def run():
             await save_debug_screenshot(page, "fatal_error")
             
         finally:
-            # Cleanup and generate tracking report
-            await cleanup_and_generate_report(browser)
+            # Close browser
+            print("\n🔄 Closing browser...")
+            await browser.close()
+            print("✓ Browser closed")
 
 
 # ============================================================================
