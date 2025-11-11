@@ -1,0 +1,140 @@
+var Vintrace = {
+	
+	focusNext: function(uniqueSelector) {		
+		var comp = $(uniqueSelector);
+		var inputs = comp.closest('form').find(':tabbable');
+		var nextIndex = inputs.index(comp) + 1;
+		if (nextIndex < inputs.length) {
+			inputs.eq(inputs.index(comp) + 1).focus();
+		}
+	},
+	smartPosition: function(selectorToMove, moveToSelector, withinSelector) {
+		$(selectorToMove).position({'my': 'left top','at': 'left bottom','of': moveToSelector, 'within': withinSelector, 'collision': 'flipfit'});
+		
+		if ($(selectorToMove).is(':offscreen')) {
+			$(selectorToMove).position({'my': 'center center','at': 'center center','of': withinSelector});
+		}
+	},
+	smartPositionToRight: function(selectorToMove, moveToSelector, withinSelector) {
+		$(selectorToMove).position({'my': 'left center','at': 'right center','of': moveToSelector, 'within': withinSelector, 'collision': 'flipfit'});
+		
+		if ($(selectorToMove).is(':offscreen')) {
+			$(selectorToMove).position({'my': 'center center','at': 'center center','of': withinSelector});
+		}
+	},
+	smartPositionAtLocation: function(selectorToMove, moveToSelector, withinSelector, fromLoc, toLoc) {
+		$(selectorToMove).position({'my': fromLoc ,'at': toLoc,'of': moveToSelector, 'within': withinSelector, 'collision': 'flipfit'});
+		
+		if ($(selectorToMove).is(':offscreen')) {
+			$(selectorToMove).position({'my': 'center center','at': 'center center','of': withinSelector});
+		}
+	},
+	
+	contextMap: {},
+	
+	addCtx: function(ref, o) {
+		Vintrace.contextMap[ref] = o;
+	},
+	
+	getCtx: function(ref) {
+		return Vintrace.contextMap[ref];
+	},
+	
+	focusNextControl: function(event, ctrl){		
+		if (event.keyCode==13){var focusable = $('input,a,select,button,textarea').filter(':visible');focusable.eq(focusable.index(ctrl)+1).focus();return false;}
+	},
+	
+	onNotesFocus :function(ctrl, scrollToBottom) {
+		$( document.getElementById(ctrl)).css("position" ,"absolute");
+		$( document.getElementById(ctrl)).css("z-index" , "40");
+		$( document.getElementById(ctrl)).animate({
+	            "height": "380px",
+	        	}, 200, Vintrace.scrollToBottomFn(ctrl, scrollToBottom));
+		 
+	},
+	
+	scrollToBottomFn : function(ctrl, scrollToBottom) {
+		document.getElementById(ctrl).focus();
+		if(scrollToBottom)
+			document.getElementById(ctrl).scrollTop = document.getElementById(ctrl).scrollHeight;
+	},
+	
+	onNotesBlur :function(ctrl) {
+		 
+		 $( document.getElementById(ctrl)).animate({
+	            "height": "70px",
+	        	}, 200,  function() {
+	        		 $( document.getElementById(ctrl)).css("position" ,"relative");
+	        		 $( document.getElementById(ctrl)).css("z-index" , "1");
+	        	  });
+	},
+	
+	onTWLKeyUpFn : function(event, ctrl, optionsDiv) {
+
+		var checkCount = 0;
+		
+		if(event.keyCode != 13) return;
+		var i = 0, checkCount = 10;
+		function timeoutFn() {
+		    i++;
+		    var isVisible =  $(document.getElementById(optionsDiv)).is(':visible');
+			if (isVisible == true) {
+				 	var e = $.Event('keydown');
+				    e.which = 13; 
+				    $(document.getElementById(ctrl)).trigger(e);
+				 }
+		    
+		    if( i < checkCount ){
+		        setTimeout(timeoutFn, 100 );
+		    }
+		}
+		timeoutFn();
+		
+	},
+	
+	horizontalScroll: function() {
+		$(".mcs-horizontal").mCustomScrollbar({		    	
+	      axis:"x",
+	      theme:"minimal-dark"
+	    });	
+	},
+	
+	verticalScroll: function() {
+
+		$(".mcs-vertical").mCustomScrollbar({		    	
+	      axis:"y",
+	      theme:"minimal-dark"
+	    });	
+	},
+	
+	disableFixedColumnDragging: function() {
+    	$('.vinDontDrag').off('mousedown');
+    },
+	
+	reloadPage: function () {
+		location.reload();
+ 	},
+
+	createDebouncer: function(coreFunction, waitMillSeconds = 300, cancelPrevious = true) {
+		const debouncedFunction = _.debounce((e) => {
+			coreFunction(e);
+		}, waitMillSeconds);
+
+		return (e) => {
+			if (cancelPrevious) {
+				PrimeFaces.ajax.Queue.abortAll();
+				debouncedFunction.cancel();
+			}
+			debouncedFunction(e);
+		};
+	}
+}
+
+// add an :offscreen filter to jQuery
+jQuery.expr.filters.offscreen = function(el) {
+	  return (
+	              (el.offsetLeft + el.offsetWidth) < 0 
+	              || (el.offsetTop + el.offsetHeight) < 0
+	              || (el.offsetLeft > window.innerWidth || el.offsetTop > window.innerHeight)
+	         );
+	};
