@@ -71,6 +71,10 @@ downloads/
 reports/
 screenshots/
 debug_*.png
+
+# Fruit reports (generated data)
+Main/data/vintrace_reports/fruit_reports/
+Main/data/vintrace_reports/analysis/combined_fruit_reports.json
 # OS
 .DS_Store
 Thumbs.db
