@@ -11,10 +11,10 @@ Usage:
     python analyze_all_inventory_lots.py
     
     # With vessel data from vessels_main.json
-    python analyze_all_inventory_lots.py --vessels-file Main/data/processed_vessels/vessels_main.json
+    python analyze_all_inventory_lots.py --vessels-file Main/data/processed_vessels/vessels_main.json 
     
     # Specify custom transaction file
-    python analyze_all_inventory_lots.py --transaction-file Transaction_to_analysise.csv
+    python analyze_all_inventory_lots.py --transaction-file Transaction_to_analysise.csv --vessels-file Main/data/processed_vessels/vessels_main.json
     
     # Generate detailed reports
     python analyze_all_inventory_lots.py --detailed-reports
