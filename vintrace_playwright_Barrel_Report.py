@@ -12,8 +12,13 @@ from vintrace_helpers import (
     wait_for_all_vintrace_loaders,
     get_main_iframe,
     initialize_browser,
+    save_debug_screenshot,
+    track_selector,
     LARGE_TIMEOUT
 )
+
+# Import centralized selectors
+from vintrace_selectors import NewUISelectors
 
 
 DOWNLOAD_TIMEOUT = 300_000  # 5 minutes
@@ -45,12 +50,9 @@ async def download_barrel_details_report(page: Page):
     
     # Step 1: Click the export button (now in iframe)
     print("\nAttempting to click export button...")
-    export_btn_selectors = [
-        "button#vesselsForm\\:vesselsDT\\:exportButton",
-        "button[id='vesselsForm:vesselsDT:exportButton']",
-        "button.vin-download-btn",
-        "button[name='vesselsForm:vesselsDT:exportButton']"
-    ]
+    
+    # Use centralized selectors from vintrace_selectors.py
+    export_btn_selectors = NewUISelectors.EXPORT_BUTTON.copy()
     
     export_clicked = False
     for selector in export_btn_selectors:
@@ -68,6 +70,7 @@ async def download_barrel_details_report(page: Page):
                 
                 await export_btn.click()
                 print(f"✓ Clicked export button using selector: {selector}")
+                track_selector("download_barrel_details_report", selector, "css", "export_button", "Export button in vessels page")
                 export_clicked = True
                 await asyncio.sleep(1.5)
                 break
@@ -77,17 +80,14 @@ async def download_barrel_details_report(page: Page):
     
     if not export_clicked:
         print("❌ ERROR: Could not click export button")
-        await page.screenshot(path="export_button_error.png")
+        await save_debug_screenshot(page, "export_button_error")
         return False
     
     # Step 2: Click "Barrel details" in the menu
     print("\nAttempting to click 'Barrel details' menu item...")
-    barrel_details_selectors = [
-        "li#vesselsForm\\:vesselsDT\\:printOptions-barrelDetails > a.ui-submenu-link",
-        "li[id='vesselsForm:vesselsDT:printOptions-barrelDetails'] > a.ui-submenu-link",
-        "li.vin-exportMenuOption:has-text('Barrel details') > a",
-        ".ui-menu-parent:has-text('Barrel details') > a.ui-submenu-link"
-    ]
+    
+    # Use centralized selectors
+    barrel_details_selectors = NewUISelectors.BARREL_DETAILS_MENU_ITEM.copy()
     
     barrel_clicked = False
     for selector in barrel_details_selectors:
@@ -102,6 +102,7 @@ async def download_barrel_details_report(page: Page):
                 await barrel_link.click()
                 await asyncio.sleep(1)
                 print(f"✓ Clicked 'Barrel details' using selector: {selector}")
+                track_selector("download_barrel_details_report", selector, "css", "barrel_details_menu", "Barrel details menu item")
                 barrel_clicked = True
                 break
         except Exception as e:
@@ -110,17 +111,14 @@ async def download_barrel_details_report(page: Page):
     
     if not barrel_clicked:
         print("❌ ERROR: Could not click 'Barrel details' menu item")
-        await page.screenshot(path="barrel_details_menu_error.png")
+        await save_debug_screenshot(page, "barrel_details_menu_error")
         return False
     
     # Step 3: Click "All" to download the report
     print("\nAttempting to click 'All' to download report...")
-    all_option_selectors = [
-        "a#vesselsForm\\:vesselsDT\\:printOptions-barrelDetails-all",
-        "a[id='vesselsForm:vesselsDT:printOptions-barrelDetails-all']",
-        "li#vesselsForm\\:vesselsDT\\:printOptions-barrelDetails ul li:has-text('All') a",
-        ".ui-menu-child a:has-text('All')"
-    ]
+    
+    # Use centralized selectors
+    all_option_selectors = NewUISelectors.BARREL_DETAILS_ALL_OPTION.copy()
     
     download_started = False
     for selector in all_option_selectors:
@@ -145,6 +143,7 @@ async def download_barrel_details_report(page: Page):
                 async with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
                     await all_option.click(force=True)
                     print(f"✓ Clicked 'All' option using selector: {selector}")
+                    track_selector("download_barrel_details_report", selector, "css", "barrel_all_option", "All option for barrel details")
                 
                 # Wait for download to complete
                 download = await download_info.value
@@ -166,7 +165,7 @@ async def download_barrel_details_report(page: Page):
     
     if not download_started:
         print("❌ ERROR: Could not click 'All' option or download failed")
-        await page.screenshot(path="download_all_error.png")
+        await save_debug_screenshot(page, "download_all_error")
         return False
     
     return True

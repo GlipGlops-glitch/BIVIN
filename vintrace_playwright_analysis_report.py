@@ -20,9 +20,13 @@ from vintrace_helpers import (
     navigate_to_reports_old_ui,
     find_report_strip_by_title,
     save_debug_screenshot,
+    track_selector,
     LARGE_TIMEOUT,
     OLD_URL
 )
+
+# Import centralized selectors
+from vintrace_selectors import ReportSelectors, OldUISelectors
 
 # Use LARGE_TIMEOUT from helpers for consistency
 DOWNLOAD_TIMEOUT = LARGE_TIMEOUT
@@ -61,12 +65,9 @@ async def download_analysis_report(page: Page):
     
     # Step 2: Click on "Product analysis" category
     print("\n🔍 Navigating to 'Product analysis' category...")
-    product_analysis_selectors = [
-        "span:text('Product analysis')",
-        "div:text('Product analysis')",
-        "td:text('Product analysis')",
-        "[id$='|Text']:text('Product analysis')",
-    ]
+    
+    # Use centralized selectors
+    product_analysis_selectors = ReportSelectors.PRODUCT_ANALYSIS_CATEGORY.copy()
     
     clicked_product_analysis = False
     for selector in product_analysis_selectors:
@@ -82,6 +83,7 @@ async def download_analysis_report(page: Page):
                     await asyncio.sleep(0.5)
                     await element.click()
                     print(f"✓ Clicked 'Product analysis' using selector: {selector}")
+                    track_selector("download_analysis_report", selector, "css", "product_analysis_category", "Product analysis category")
                     clicked_product_analysis = True
                     await wait_for_all_vintrace_loaders(iframe)
                     await asyncio.sleep(2)
@@ -178,11 +180,8 @@ async def download_analysis_report(page: Page):
     # Step 6: Check "Show active only" checkbox
     print("\n☑️  Checking 'Show active only' checkbox...")
     
-    checkbox_selectors = [
-        "div.checkbox-text:has-text('Show active only')",
-        "table:has-text('Show active only') img[src*='Checkbox']",
-        "*:has-text('Show active only')"
-    ]
+    # Use centralized selectors
+    checkbox_selectors = ReportSelectors.SHOW_ACTIVE_ONLY.copy()
     
     checkbox_checked = False
     for selector in checkbox_selectors:
@@ -214,9 +213,11 @@ async def download_analysis_report(page: Page):
                                 await checkbox_parent.click()
                                 await asyncio.sleep(0.5)
                                 print(f"✓ Checked 'Show active only'")
+                                track_selector("download_analysis_report", selector, "css", "show_active_only", "Show active only checkbox")
                             else:
                                 await checkbox_img.click()
                                 print(f"✓ Checked 'Show active only' (clicked image)")
+                                track_selector("download_analysis_report", selector, "css", "show_active_only", "Show active only checkbox")
                         else:
                             print(f"✓ 'Show active only' already checked")
                         
@@ -238,12 +239,9 @@ async def download_analysis_report(page: Page):
     
     # Step 7: Click the "Generate..." button
     print("\n📊 Clicking 'Generate...' button...")
-    generate_button_selectors = [
-        "button:has-text('Generate')",
-        "button:has-text('Generate...')",
-        "input[type='button'][value*='Generate']",
-        "button.inlineButton.positiveAction",
-    ]
+    
+    # Use centralized selectors
+    generate_button_selectors = OldUISelectors.GENERATE_BUTTON.copy()
     
     clicked_generate = False
     for selector in generate_button_selectors:
@@ -258,6 +256,7 @@ async def download_analysis_report(page: Page):
                 async with page.expect_download(timeout=DOWNLOAD_TIMEOUT) as download_info:
                     await button.click()
                     print(f"✓ Clicked 'Generate...' button using selector: {selector}")
+                    track_selector("download_analysis_report", selector, "css", "generate_button", "Generate button for analysis report")
                 
                 # Wait for download to complete
                 download = await download_info.value
