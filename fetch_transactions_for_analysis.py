@@ -6,7 +6,7 @@ This script fetches transaction data from the Vintrace API and saves it in a for
 compatible with the transaction_lineage_analyzer.py tool.
 
 Usage:
-    python fetch_transactions_for_analysis.py --from-date 2024-01-01 --to-date 2024-12-31
+    python fetch_transactions_for_analysis.py --from-date 2025-09-01 --to-date 2025-11-11
     
     Or with specific filters:
     python fetch_transactions_for_analysis.py --from-date 2024-01-01 --batch-name "24CABSAUV*"
