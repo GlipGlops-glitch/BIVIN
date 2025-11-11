@@ -6,11 +6,31 @@ A complete Python-based system for analyzing vessel-batch transaction lineage in
 
 This system provides:
 - **Transaction lineage tracking** - Trace any batch back to all contributing source batches
+- **Volume-based lineage** - Uses Src Vol Change and Dest Vol Change for accurate gallon tracking
 - **Pre/Post batch state tracking** - Account for batch identity changes during transactions
 - **Power BI integration** - Export data in formats ready for Power BI reporting
 - **API integration** - Fetch live transaction data from Vintrace API
 - **Flexible analysis** - Analyze on-hand inventory or completed shipments
 - **Full audit trail** - Track all operations, losses, and gains
+
+## 🆕 Volume Change Based Lineage Tracking
+
+**Critical Enhancement**: The analyzer now uses **Src Vol Change** and **Dest Vol Change** instead of NET for accurate gallon tracking.
+
+### How It Works:
+- **Src Vol Change**: Tracks how many gallons left the source vessel (negative value)
+- **Dest Vol Change**: Tracks how many gallons arrived at the destination vessel (positive value)
+- **Accurate Transfers**: These values properly account for losses/gains during transfer
+- **Legacy NET field**: No longer used for lineage tracking as it often equals 0 and doesn't reflect actual transfers
+
+### Example:
+```
+Transaction: Transfer from Batch A to Batch B
+- Src Vol Change: -3076 gallons (left source)
+- Dest Vol Change: +3089 gallons (arrived at destination)
+- NET: 0 (legacy field, not used)
+- Lineage tracks: 3089 gallons contributed from A to B
+```
 
 ## 🆕 Pre/Post Batch State Tracking
 
@@ -107,10 +127,13 @@ The analyzer now supports the complete Vintrace transaction export format with a
 | **Src Vessel** | Source vessel name |
 | **Src Batch Pre** | Source batch name BEFORE transaction |
 | **Src Batch Post** | Source batch name AFTER transaction |
+| **Src Vol Change** | Volume change in source vessel (negative when material leaves) |
 | **Dest Vessel** | Destination vessel name |
 | **Dest Batch Pre** | Destination batch name BEFORE transaction |
 | **Dest Batch Post** | Destination batch name AFTER transaction |
-| **NET** | Net gallons transferred/changed |
+| **Dest Vol Change** | Volume change in destination vessel (positive when material arrives) |
+| **Dest Vol Post** | Destination volume after transaction (used for on-hand tracking) |
+| **NET** | Net gallons transferred/changed (legacy field, not used for lineage tracking) |
 
 **Additional Tracked Properties (Pre and Post states for both Source and Destination):**
 - Tax State (Bonded, Non-declared, etc.)

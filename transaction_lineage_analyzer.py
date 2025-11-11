@@ -8,10 +8,16 @@ the full history of any vessel-batch.
 
 Features:
 - Load transaction data from CSV files
-- Track lineage from source batches to destination batches
+- Track lineage from source batches to destination batches using Src Vol Change and Dest Vol Change
+- Accurate gallon tracking accounting for losses/gains during transfers
 - Generate reports showing all contributing batches to a final product
 - Export data in Power BI compatible formats (CSV, JSON)
 - Support for various transaction types: Transfer, Blend, Adjustment, Receipt, On-Hand
+
+Volume Tracking:
+- Uses Src Vol Change (gallons leaving source) and Dest Vol Change (gallons arriving at destination)
+- NET field is preserved but not used for lineage tracking as it often equals 0
+- Properly accounts for losses/gains between source and destination
 
 Usage:
     python transaction_lineage_analyzer.py
@@ -318,10 +324,16 @@ class TransactionLineageAnalyzer:
     def _build_lineage(self):
         """Build the lineage relationships from transactions
         
-        This method now accounts for pre/post batch states:
+        This method accounts for:
+        - Pre/post batch states (batch identity can change during transactions)
+        - Volume changes using Src Vol Change and Dest Vol Change for accurate gallon tracking
         - Source batches may have different pre/post names (Src Batch Pre/Post)
         - Destination batches may have different pre/post names (Dest Batch Pre/Post)
-        - Batch identity can change during a transaction
+        
+        Volume Tracking:
+        - Uses Dest Vol Change for incoming transactions (gallons arriving at destination)
+        - Uses Src Vol Change for adjustments when Dest Vol Change is 0
+        - NET field is not used for lineage tracking as it often equals 0
         """
         logger.info("Building lineage relationships...")
         
@@ -369,13 +381,15 @@ class TransactionLineageAnalyzer:
                 current_batch = dest_batch or dest_batch_pre
                 if current_batch and current_batch in self.batch_lineages:
                     self.batch_lineages[current_batch].is_on_hand = True
-                    self.batch_lineages[current_batch].current_volume = trans.net
+                    # Use dest_vol_post as the current volume for on-hand batches
+                    self.batch_lineages[current_batch].current_volume = trans.dest_vol_post
                     
             elif trans.op_type in ['Transfer', 'Blend', 'Receipt']:
                 # Material moved from one batch to another
                 # Track lineage from source to destination
+                # Use dest_vol_change to track how much arrived at the destination
                 if dest_batch and dest_batch in self.batch_lineages:
-                    self.batch_lineages[dest_batch].add_incoming_transaction(trans, abs(trans.net))
+                    self.batch_lineages[dest_batch].add_incoming_transaction(trans, abs(trans.dest_vol_change))
                     
                 if src_batch and src_batch in self.batch_lineages:
                     self.batch_lineages[src_batch].add_outgoing_transaction(trans)
@@ -390,14 +404,17 @@ class TransactionLineageAnalyzer:
                     
                 if dest_batch_pre and dest_batch_pre != dest_batch and dest_batch_pre in self.batch_lineages:
                     # Destination batch had a different name before, track incoming to the old name too
-                    self.batch_lineages[dest_batch_pre].add_incoming_transaction(trans, abs(trans.net))
+                    self.batch_lineages[dest_batch_pre].add_incoming_transaction(trans, abs(trans.dest_vol_change))
                         
             elif trans.op_type in ['Adjustment', 'Measurement', 'Treatment', 'Analysis']:
                 # Adjustments, measurements, treatments affect the batch but may not indicate movement
                 # These can change batch properties (tax state, grading, etc.) without moving volume
+                # Use dest_vol_change if available, otherwise src_vol_change
                 target_batch = dest_batch or dest_batch_pre or src_batch_post or src_batch
                 if target_batch and target_batch in self.batch_lineages:
-                    self.batch_lineages[target_batch].add_incoming_transaction(trans, abs(trans.net))
+                    # For adjustments, use dest_vol_change if available and non-zero, otherwise src_vol_change
+                    volume_change = abs(trans.dest_vol_change) if trans.dest_vol_change != 0 else abs(trans.src_vol_change)
+                    self.batch_lineages[target_batch].add_incoming_transaction(trans, volume_change)
                     
         logger.info(f"Built lineage for {len(self.batch_lineages)} batches")
         
