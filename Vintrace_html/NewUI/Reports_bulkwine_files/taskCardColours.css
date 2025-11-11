@@ -1,0 +1,70 @@
+/* task colours */
+
+.taskCard_EXTRACTION,.taskCard_PRESS_CYCLE{
+	border-left-color: #ff7537 !important;
+}
+.taskCard_BLEND,.taskCard_LIQUID_TRANSFER,.taskCard_RACKING,.taskCard_RACK_AND_RETURN,.taskCard_RACK_TO_BARREL_GROUP,.taskCard_MULTI_TRANSFER,.taskCard_BIN_TRANSFER_BLEND,.taskCard_BLEND_TRANSFER, .taskCard_MOVE {
+	border-left-color: #7bd148 !important;
+}
+.taskCard_SAMPLING,.taskCard_FERMENT_ANALYSIS,.taskCard_ANALYSIS {
+	border-left-color: #9fc6e7 !important;
+}
+.taskCard_START_FERMENT,.taskCard_STOP_FERMENT {
+	border-left-color: #9a9cff !important;
+}
+.taskCard_ADDITION,.taskCard_MULTI_ADDITION {
+	border-left-color: #f691b2 !important;
+}
+.taskCard_PACKAGING_RUN,.taskCard_NEW_PACKAGING_RUN,.taskCard_TIRAGE, .taskCard_MANUFACTURE {
+	border-left-color: #16a765 !important;
+}
+.taskCard_EQUIPMENT_TREATMENT,.taskCard_BARREL_TREATMENT {
+	border-left-color: #fbe983 !important;
+}
+.taskCard_BREAK_AND_TOP,.taskCard_TOPPING,.taskCard_MULTI_TOPPING {
+	border-left-color: #4986e7 !important;
+}
+.taskCard_BULK_DISPATCH,.taskCard_NEW_BULK_DISPATCH, .taskCard_DISPATCH {
+	border-left-color: #92e1c0 !important;
+}
+.taskCard_TRIAL_BLEND {
+	border-left-color: #cabdbf !important;
+}
+.taskCard_MEASUREMENT {
+	border-left-color: #cd74e6 !important;
+}
+.taskCard_DELIVERY {
+	border-left-color: #cca6ac !important;
+}
+.taskCard_PRODUCT_TREATMENT {
+	border-left-color: #ac725e !important;
+}
+.taskCard_TASTING_NOTE {
+	border-left-color: #f83a22 !important;
+}
+.taskCard_MOVE_TO_BATCH {
+	border-left-color: #ffad46 !important;
+}
+
+.taskCard_TASK {
+	border-left-color: #42d692 !important;
+}
+.taskCard_CHANGE_OWNER {
+	border-left-color: #B3DC6C !important;
+}
+
+.taskCard_BULK_INTAKE, .taskCard_RECEIVAL {
+	border-left-color: #fad165 !important;
+}
+.taskCard_RIDDLING {
+	border-left-color: #9fe1e7 !important;
+}
+.taskCard_TIRAGE_ADMIN {
+	border-left-color: #b99aff !important;
+}
+.taskCard_BATCHCREATE,.taskCard_CREATE_STOCK,.taskCard_IMPORT_COMPOSITION,.taskCard_LIQUIDBATCHCREATE,.taskCard_RESURRECT,.taskCard_REVERSE_BLEND,.taskCard_INTAKE_CORRECTION,.taskCard_REVERSE_EXTRACTION,.taskCard_FIXUP{
+	border-left-color: #c2c2c2 !important;
+}
+.taskCard_DISASSEMBLE {
+	border-left-color: #b99aff !important;
+}

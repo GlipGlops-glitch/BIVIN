@@ -1,0 +1,52 @@
+div.vintraceLoaderContainer {
+	position:absolute;
+	top:0px;
+	left:0px;
+	width:100vw;
+	height:100vh;
+	cursor:wait;
+	margin:0px;
+	padding:0px;
+	visibility:hidden;
+	z-index:10000;
+}
+
+div.vintraceLoaderContent {
+    width: 160px;
+    height: 72px;
+    border: 1px solid #CCCCCC;
+    padding: 12px;
+    margin: auto;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    position: absolute;
+    background-color: #ffffff;
+    color: #000000;
+    box-shadow: 0px 1px 4px 0px rgba(0,0,0,0.15);
+    border-radius: 8px;
+}
+
+.vintraceLoaderText {
+    line-height: 48px;
+    vertical-align: middle;
+    padding-left: 48px;
+    font-size: 14px;
+    font-family: montserrat, verdana, arial, helvetica, sans-serif;
+}
+
+
+
+
+.cssload-box-loading {
+	width: 48px;
+	height: 48px;
+	margin: auto;
+	position: absolute;
+	xleft: 0;
+	xright: 0;
+	xtop: 0;
+	xbottom: 0;
+	background: url('../../resource/image/teal-loaderx31.gif') no-repeat top 8px left 4px;
+}
