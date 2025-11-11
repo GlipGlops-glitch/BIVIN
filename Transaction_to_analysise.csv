@@ -1,0 +1,16 @@
+Op Date,Op Id,Op Type,From Vessel,From Batch,To Vessel,To Batch,NET,Loss/Gain Amount (gal),Loss/Gain Reason,Winery
+2024-01-15,OP-1001,Transfer,Tank-A,24CABSAUV001,Tank-B,24CABSAUV002,250.5,2.5,Evaporation,Canoe Ridge Winery
+2024-01-16,OP-1002,Transfer,Tank-B,24CABSAUV002,Barrel-001,24CABSAUV003,125.0,1.2,Racking Loss,Canoe Ridge Winery
+2024-01-16,OP-1003,Transfer,Tank-B,24CABSAUV002,Barrel-002,24CABSAUV003,125.5,1.3,Racking Loss,Canoe Ridge Winery
+2024-01-17,OP-1004,Transfer,Tank-C,24MERLOT001,Tank-D,24MERLOT002,300.0,3.0,Topping,Canoe Ridge Winery
+2024-01-18,OP-1005,Blend,Barrel-001,24CABSAUV003,Tank-E,24BLEND001,50.0,0.5,Blending Loss,Canoe Ridge Winery
+2024-01-18,OP-1006,Blend,Barrel-002,24CABSAUV003,Tank-E,24BLEND001,50.0,0.5,Blending Loss,Canoe Ridge Winery
+2024-01-18,OP-1007,Blend,Tank-D,24MERLOT002,Tank-E,24BLEND001,200.0,2.0,Blending Loss,Canoe Ridge Winery
+2024-01-19,OP-1008,Adjustment,Tank-E,24BLEND001,Tank-E,24BLEND001,0.0,5.0,Sampling,Canoe Ridge Winery
+2024-01-20,OP-1009,Transfer,Tank-E,24BLEND001,Bottling-Line,24BLEND001-FINAL,298.0,2.0,Bottling Loss,Canoe Ridge Winery
+2024-01-22,OP-1010,Receipt,Supplier-Tank,BULK-WINE-001,Tank-F,24IMPORT001,500.0,0.0,None,Canoe Ridge Winery
+2024-01-23,OP-1011,Transfer,Tank-F,24IMPORT001,Tank-G,24IMPORT002,250.0,2.5,Transfer Loss,Canoe Ridge Winery
+2024-01-23,OP-1012,Transfer,Tank-F,24IMPORT001,Tank-H,24IMPORT003,247.5,2.5,Transfer Loss,Canoe Ridge Winery
+2024-01-24,OP-1013,On-Hand,Tank-A,24CABSAUV001,Tank-A,24CABSAUV001,150.0,0.0,Current Inventory,Canoe Ridge Winery
+2024-01-24,OP-1014,On-Hand,Tank-G,24IMPORT002,Tank-G,24IMPORT002,250.0,0.0,Current Inventory,Canoe Ridge Winery
+2024-01-24,OP-1015,On-Hand,Tank-H,24IMPORT003,Tank-H,24IMPORT003,247.5,0.0,Current Inventory,Canoe Ridge Winery
