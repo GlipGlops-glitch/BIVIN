@@ -27,8 +27,14 @@ from dotenv import load_dotenv
 # CONSTANTS
 # ============================================================================
 
+# Timeout values (in milliseconds)
 LARGE_TIMEOUT = 120000  # 2 minutes
 DOWNLOAD_TIMEOUT_MS = 1200000  # 20 minutes for large reports
+STANDARD_TIMEOUT = 30000  # 30 seconds - standard wait time
+MEDIUM_TIMEOUT = 10000  # 10 seconds - medium wait time
+SHORT_TIMEOUT = 5000  # 5 seconds - short wait time
+QUICK_TIMEOUT = 3000  # 3 seconds - quick operations
+LOADER_APPEAR_TIMEOUT = 15000  # 15 seconds - wait for loader to appear
 
 # URLs
 LOGIN_URL = "https://auth.vintrace.app/sign-in?customerCode=smwe"
@@ -373,7 +379,7 @@ async def wait_for_all_vintrace_loaders(page_or_frame, timeout=LARGE_TIMEOUT):
         print(f"⚠ Timeout waiting for loaders to hide (may be okay): {e}")
 
 
-async def wait_for_vintrace_loaders_to_appear(page_or_frame, timeout=30000):
+async def wait_for_vintrace_loaders_to_appear(page_or_frame, timeout=STANDARD_TIMEOUT):
     """
     Wait for Vintrace loading indicators to APPEAR (become visible).
     Useful to ensure a page action triggered loading before waiting for it to complete.
@@ -456,7 +462,7 @@ async def get_main_iframe(page: Page):
 
     for selector in iframe_selectors:
         try:
-            iframe_element = await page.wait_for_selector(selector, timeout=10000, state="attached")
+            iframe_element = await page.wait_for_selector(selector, timeout=MEDIUM_TIMEOUT, state="attached")
             if iframe_element:
                 iframe = await iframe_element.content_frame()
                 if iframe:
@@ -464,7 +470,7 @@ async def get_main_iframe(page: Page):
                     # Track successful selector
                     track_selector("get_main_iframe", selector, "css", "main_iframe", "Main application iframe")
                     # Wait for iframe to load
-                    await iframe.wait_for_load_state("domcontentloaded", timeout=30000)
+                    await iframe.wait_for_load_state("domcontentloaded", timeout=STANDARD_TIMEOUT)
                     return iframe
         except Exception as e:
             print(f"  ✗ Failed to find iframe with selector '{selector}': {e}")
@@ -490,7 +496,7 @@ async def get_iframe_by_src(page: Page, src_pattern: str):
 
     try:
         selector = f"iframe[src*='{src_pattern}']"
-        iframe_element = await page.wait_for_selector(selector, timeout=10000, state="attached")
+        iframe_element = await page.wait_for_selector(selector, timeout=MEDIUM_TIMEOUT, state="attached")
         if iframe_element:
             iframe = await iframe_element.content_frame()
             if iframe:
@@ -500,7 +506,7 @@ async def get_iframe_by_src(page: Page, src_pattern: str):
                     f"src_pattern_{src_pattern}",
                     f"Iframe with src containing {src_pattern}"
                 )
-                await iframe.wait_for_load_state("domcontentloaded", timeout=30000)
+                await iframe.wait_for_load_state("domcontentloaded", timeout=STANDARD_TIMEOUT)
                 return iframe
     except Exception as e:
         print(f"  ✗ Failed to find iframe with src pattern '{src_pattern}': {e}")
@@ -584,14 +590,14 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
     print(f"Navigating to login page: {LOGIN_URL}")
 
     await page.goto(LOGIN_URL, timeout=LARGE_TIMEOUT)
-    await page.wait_for_load_state("networkidle", timeout=30000)
+    await page.wait_for_load_state("networkidle", timeout=STANDARD_TIMEOUT)
     print("✓ Login page loaded")
 
     # Wait for the Login tab to be active (in case page loads on Register tab)
     try:
         await page.wait_for_selector(
             'button[role="tab"][aria-selected="true"]:has-text("Login")',
-            timeout=5000
+            timeout=SHORT_TIMEOUT
         )
         print("✓ Login tab is active")
         track_selector(
@@ -604,7 +610,7 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
         try:
             login_tab_button = await page.wait_for_selector(
                 'button[role="tab"]:has-text("Login")',
-                timeout=5000
+                timeout=SHORT_TIMEOUT
             )
             await login_tab_button.click()
             print("✓ Clicked Login tab")
@@ -641,7 +647,7 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
     email_filled = False
     for selector in email_selectors:
         try:
-            await page.wait_for_selector(selector, timeout=5000, state="visible")
+            await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
             await page.fill(selector, username)
             print(f"✓ Filled email using selector: {selector}")
             track_selector(
@@ -666,7 +672,7 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
     password_filled = False
     for selector in password_selectors:
         try:
-            await page.wait_for_selector(selector, timeout=5000, state="visible")
+            await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
             await page.fill(selector, password)
             print(f"✓ Filled password using selector: {selector}")
             track_selector(
@@ -701,7 +707,7 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
     login_clicked = False
     for selector in login_btn_selectors:
         try:
-            await page.wait_for_selector(selector, timeout=5000, state="visible")
+            await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
             login_btn = await page.query_selector(selector)
             if login_btn:
                 # Ensure button is enabled
@@ -790,13 +796,13 @@ async def vintrace_login(page: Page, username: str, password: str, navigate_to_o
         print("\n⏳ Waiting for new Vintrace UI to load...")
 
         # Wait for the main page loaders
-        await wait_for_vintrace_loaders_to_appear(page, timeout=15000)
+        await wait_for_vintrace_loaders_to_appear(page, timeout=LOADER_APPEAR_TIMEOUT)
         await wait_for_all_vintrace_loaders(page, timeout=LARGE_TIMEOUT)
 
         # Get the main iframe and wait for it to load
         iframe = await get_main_iframe(page)
         if iframe != page:  # If we found an iframe
-            await wait_for_vintrace_loaders_to_appear(iframe, timeout=15000)
+            await wait_for_vintrace_loaders_to_appear(iframe, timeout=LOADER_APPEAR_TIMEOUT)
             await wait_for_all_vintrace_loaders(iframe, timeout=LARGE_TIMEOUT)
             await close_popups(iframe)
 
@@ -844,7 +850,7 @@ async def navigate_to_reports_new_ui(page: Page):
 
             # Special handling for the icon selector
             if "ui-icon-reports" in selector:
-                icon = await page.wait_for_selector(selector, timeout=5000, state="visible")
+                icon = await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
                 if icon:
                     # Get the parent <a> tag
                     link = await icon.evaluate_handle("el => el.closest('a')")
@@ -865,7 +871,7 @@ async def navigate_to_reports_new_ui(page: Page):
                         return True
             else:
                 # Normal selector
-                await page.wait_for_selector(selector, timeout=5000, state="visible")
+                await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
                 reports_link = await page.query_selector(selector)
                 if reports_link:
                     await reports_link.scroll_into_view_if_needed()
@@ -929,7 +935,7 @@ async def navigate_to_report_category(page: Page, category_name: str):
 
     # Wait for the report categories table to load
     try:
-        await page.wait_for_selector("table.jx2table", timeout=10000)
+        await page.wait_for_selector("table.jx2table", timeout=MEDIUM_TIMEOUT)
         print("✓ Report categories loaded")
     except Exception as e:
         print(f"❌ Report categories table not found: {e}")
@@ -971,7 +977,7 @@ async def navigate_to_report_category(page: Page, category_name: str):
 
     for selector in selectors:
         try:
-            element = await page.wait_for_selector(selector, timeout=3000, state="visible")
+            element = await page.wait_for_selector(selector, timeout=QUICK_TIMEOUT, state="visible")
             if element:
                 # Check if text matches exactly
                 text = await element.inner_text()
@@ -1037,7 +1043,7 @@ async def find_and_click_report_by_name(page: Page, report_name: str):
 
     # Wait for reports to load in the right panel
     try:
-        await page.wait_for_selector("div.report-content", timeout=10000)
+        await page.wait_for_selector("div.report-content", timeout=MEDIUM_TIMEOUT)
         print("✓ Report content area loaded")
     except Exception as e:
         print(f"❌ Report content area not found: {e}")
@@ -1052,7 +1058,7 @@ async def find_and_click_report_by_name(page: Page, report_name: str):
 
     for selector in selectors:
         try:
-            element = await page.wait_for_selector(selector, timeout=3000, state="visible")
+            element = await page.wait_for_selector(selector, timeout=QUICK_TIMEOUT, state="visible")
             if element:
                 # Check if text matches exactly
                 text = await element.inner_text()
@@ -1136,7 +1142,7 @@ async def close_report_window(page: Page):
 
     for selector in close_selectors:
         try:
-            close_btn = await page.wait_for_selector(selector, timeout=5000, state="visible")
+            close_btn = await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT, state="visible")
             if close_btn:
                 await close_btn.scroll_into_view_if_needed()
                 await asyncio.sleep(0.3)
@@ -1192,7 +1198,7 @@ async def navigate_to_reports_old_ui(page: Page):
 
     for selector in selectors:
         try:
-            await page.wait_for_selector(selector, timeout=10000)
+            await page.wait_for_selector(selector, timeout=MEDIUM_TIMEOUT)
             reports_icon = await page.query_selector(selector)
             if reports_icon:
                 await reports_icon.scroll_into_view_if_needed()
@@ -1246,7 +1252,7 @@ async def click_vintage_harvest_tab_old_ui(page: Page):
 
     for selector in selectors:
         try:
-            await page.wait_for_selector(selector, timeout=5000)
+            await page.wait_for_selector(selector, timeout=SHORT_TIMEOUT)
             element = await page.query_selector(selector)
             if element:
                 await element.scroll_into_view_if_needed()
@@ -1309,7 +1315,7 @@ async def find_report_strip_by_title(page: Page, report_title: str):
 
     try:
         # Wait for report strips to load
-        await page.wait_for_selector("div.reportStrip", timeout=10000)
+        await page.wait_for_selector("div.reportStrip", timeout=MEDIUM_TIMEOUT)
 
         # Find all report strips
         report_strips = await page.query_selector_all("div.reportStrip")
