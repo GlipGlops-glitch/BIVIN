@@ -1,10 +1,60 @@
-# BIVIN - Vintrace Automation Scripts
+# BIVIN - Vintrace Automation & API Integration
 
-Playwright-based automation scripts for Vintrace winery software.
+Complete automation and API integration suite for Vintrace winery software.
 
 ## Overview
 
-This repository contains automated scripts for downloading reports from Vintrace using Playwright. The scripts are designed to be maintainable, with centralized selector management and intelligent selector tracking.
+This repository contains:
+1. **Playwright-based automation scripts** for downloading reports from Vintrace UI
+2. **Complete Python API client** for Vintrace V6 REST API with all endpoints and data models
+
+---
+
+## 🆕 Vintrace V6 API Client
+
+**NEW: Complete Python client for Vintrace V6 REST API**
+
+Located in the `API/` directory, this provides programmatic access to all Vintrace data and operations.
+
+### Quick Start
+
+```python
+from API import create_client_from_env
+
+# Create client from .env file
+client = create_client_from_env()
+
+# Get work orders
+work_orders = client.list_available_work_orders()
+
+# Get all products (with automatic pagination)
+products = client.get_all_pages(client.list_available_products)
+
+# Search transactions
+transactions = client.transaction_search(
+    fromDate="2024-01-01",
+    toDate="2024-12-31"
+)
+```
+
+### API Client Features
+
+- ✅ **37 API Endpoints**: Complete coverage of Vintrace V6 API
+- ✅ **99 Pydantic Models**: Type-safe data validation
+- ✅ **Automatic Pagination**: Built-in helper for list endpoints
+- ✅ **Retry Logic**: Exponential backoff on failures
+- ✅ **Authentication**: API key and basic auth support
+- ✅ **Helper Utilities**: High-level functions for common tasks
+- ✅ **Full Documentation**: Comprehensive guides and examples
+
+👉 **See [API/QUICKSTART.md](API/QUICKSTART.md) for detailed usage**  
+👉 **See [API/README.md](API/README.md) for complete documentation**
+
+---
+
+## Playwright Automation Scripts
+
+Automated scripts for downloading reports from Vintrace using Playwright. The scripts are designed to be maintainable, with centralized selector management and intelligent selector tracking.
 
 ## Files
 
@@ -251,6 +301,7 @@ print(_tracker.generate_report())
 
 ## Best Practices
 
+### Playwright Automation
 1. **Always use centralized selectors** from `vintrace_selectors.py`
 2. **Track successful selectors** with `track_selector()`
 3. **Use multiple fallback selectors** for reliability
@@ -258,15 +309,64 @@ print(_tracker.generate_report())
 5. **Wait for loaders** to disappear before interacting with elements
 6. **Test in non-headless mode** first to see what's happening
 
+### API Client
+1. **Use environment variables** for credentials (`.env` file)
+2. **Use `get_all_pages()`** for complete data sets
+3. **Use VintraceDataFetcher** for common tasks
+4. **Handle errors gracefully** with try/except blocks
+5. **Check response structure** - API returns paginated results
+6. **Use type hints** - All methods have proper typing
+
+## Repository Structure
+
+```
+BIVIN/
+├── API/                                   # Vintrace V6 API Client
+│   ├── vintrace_api_client.py             # Main API client (37 endpoints)
+│   ├── vintrace_models.py                 # 99 Pydantic data models
+│   ├── vintrace_api_utils.py              # Helper utilities
+│   ├── generate_api_client.py             # Code generator
+│   ├── requirements.txt                   # API dependencies
+│   ├── README.md                          # API documentation
+│   ├── QUICKSTART.md                      # Quick start guide
+│   ├── IMPLEMENTATION_SUMMARY.md          # Technical details
+│   └── examples/                          # 5 working examples
+│       ├── example_work_orders.py
+│       ├── example_export_products.py
+│       ├── example_stock_details.py
+│       ├── example_transactions.py
+│       └── example_bulk_export.py
+├── vintrace_helpers.py                    # Playwright automation helpers
+├── vintrace_selectors.py                  # UI selectors
+├── vintrace_playwright_Barrel_Report.py   # Barrel report automation
+├── vintrace_playwright_analysis_report.py # Analysis report automation
+└── Vintrace_html/                         # HTML reference files
+```
+
 ## Contributing
 
 When adding new functionality:
 
+### For Playwright Automation:
 1. Add selectors to `vintrace_selectors.py` first
 2. Create helper functions in `vintrace_helpers.py` for reusable logic
 3. Use the selector tracking system
 4. Add debug screenshots on errors
 5. Document your changes
+
+### For API Client:
+1. Update `API/vintrace-v6-apis.yaml` with new API specification
+2. Run `python3 API/generate_api_client.py` to regenerate code
+3. Add examples to `API/examples/` for new features
+4. Update documentation in `API/README.md`
+5. Test imports and basic functionality
+
+## Related Documentation
+
+- **[API Quick Start](API/QUICKSTART.md)** - Get started with the API client
+- **[API Documentation](API/README.md)** - Complete API reference
+- **[API Implementation](API/IMPLEMENTATION_SUMMARY.md)** - Technical details
+- **[OpenAPI Spec](API/vintrace-v6-apis.yaml)** - Official API specification
 
 ## License
 
