@@ -7,6 +7,31 @@ Complete automation and API integration suite for Vintrace winery software.
 This repository contains:
 1. **Playwright-based automation scripts** for downloading reports from Vintrace UI
 2. **Complete Python API client** for Vintrace V6 REST API with all endpoints and data models
+3. **Transaction lineage analysis** for tracing batch history and analyzing inventory lots
+
+---
+
+## 🆕 Inventory Lot Analysis
+
+**NEW: Analyze all lots currently in inventory with complete lineage tracking**
+
+```bash
+# Fetch current vessel data
+python fetch_Vessels.py
+python melt_vessels.py
+
+# Analyze all inventory lots
+python analyze_all_inventory_lots.py --vessels-file Main/data/processed_vessels/vessels_main.json
+```
+
+This generates:
+- Summary reports of all on-hand inventory
+- Lineage tracking showing which batches contributed to each lot
+- Power BI compatible exports (CSV, JSON)
+- Detailed per-batch reports
+
+👉 **See [README_ANALYZE_INVENTORY.md](README_ANALYZE_INVENTORY.md) for complete guide**  
+👉 **See [README_TRANSACTION_LINEAGE.md](README_TRANSACTION_LINEAGE.md) for lineage analysis details**
 
 ---
 
