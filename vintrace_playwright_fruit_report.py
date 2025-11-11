@@ -291,8 +291,8 @@ async def download_fruit_report(page: Page, vessel_name: str):
         await save_debug_screenshot(page, f"export_button_error_{vessel_name}")
         return False
     
-    # Step 3: Click "Excel" in the menu
-    print("📊 Clicking 'Excel' menu item...")
+    # Step 3: Click "Excel" in the menu to trigger slide animation
+    print("📊 Clicking 'Excel' menu item to trigger slide menu...")
     
     excel_menu_selectors = [
         "li.vin-exportMenuOption:has-text('Excel') > a",
@@ -311,25 +311,51 @@ async def download_fruit_report(page: Page, vessel_name: str):
                 await excel_item.scroll_into_view_if_needed()
                 await asyncio.sleep(0.5)
                 
-                # Hover to show submenu
-                await excel_item.hover()
-                await asyncio.sleep(1.5)  # Wait for submenu to appear
-                print(f"✓ Hovered over 'Excel' menu item using selector: {selector}")
+                # Click to trigger the slide menu animation (not hover)
+                await excel_item.click()
+                print(f"✓ Clicked 'Excel' menu item using selector: {selector}")
                 track_selector("download_fruit_report", selector, "css", "excel_menu", "Excel menu item")
-                excel_clicked = True
-                break
+                
+                # Wait for slide animation to complete and submenu to appear
+                # The submenu should have display: block when visible
+                await asyncio.sleep(2)  # Wait for animation to complete
+                
+                # Verify submenu is visible
+                submenu_selectors = [
+                    "li.vin-exportMenuOption:has-text('Excel') ul.ui-menu-child",
+                    "ul.ui-menu-child[style*='display: block']",
+                    "ul.ui-slidemenu-content"
+                ]
+                
+                submenu_visible = False
+                for submenu_selector in submenu_selectors:
+                    try:
+                        submenu = await iframe.query_selector(submenu_selector)
+                        if submenu and await submenu.is_visible():
+                            print(f"✓ Submenu appeared using selector: {submenu_selector}")
+                            submenu_visible = True
+                            break
+                    except Exception:
+                        continue
+                
+                if submenu_visible or True:  # Proceed even if we can't verify submenu
+                    excel_clicked = True
+                    break
         except Exception as e:
             continue
     
     if not excel_clicked:
-        print("❌ ERROR: Could not find or hover over 'Excel' menu item")
+        print("❌ ERROR: Could not find or click 'Excel' menu item")
         await save_debug_screenshot(page, f"excel_menu_error_{vessel_name}")
         return False
     
     # Step 4: Click "All" option with retry mechanism
     print("📥 Clicking 'All' option to download...")
     
+    # More specific selectors targeting the Excel submenu items
     all_option_selectors = [
+        "li.vin-exportMenuOption:has-text('Excel') ul.ui-menu-child li:has-text('All') a",
+        "ul.ui-menu-child li:has-text('All') a",
         "li.ui-menuitem:has-text('All') a",
         "a.ui-menuitem-link:has-text('All')",
         "span.ui-menuitem-text:has-text('All')",
@@ -342,16 +368,16 @@ async def download_fruit_report(page: Page, vessel_name: str):
     for attempt in range(1, max_attempts + 1):
         print(f"📥 Attempt {attempt}/{max_attempts} to click 'All' option...")
         
-        # Re-hover over Excel menu if this is a retry attempt
+        # Re-click Excel menu if this is a retry attempt
         if attempt > 1:
-            print(f"🔄 Re-hovering over Excel menu before attempt {attempt}...")
+            print(f"🔄 Re-clicking Excel menu before attempt {attempt}...")
             for selector in excel_menu_selectors:
                 try:
                     excel_item = await iframe.query_selector(selector)
                     if excel_item:
-                        await excel_item.hover()
-                        await asyncio.sleep(1.5)  # Wait for submenu to reappear
-                        print(f"✓ Re-hovered over 'Excel' menu item for attempt {attempt}")
+                        await excel_item.click()
+                        await asyncio.sleep(2)  # Wait for submenu animation to complete
+                        print(f"✓ Re-clicked 'Excel' menu item for attempt {attempt}")
                         break
                 except Exception as e:
                     continue
