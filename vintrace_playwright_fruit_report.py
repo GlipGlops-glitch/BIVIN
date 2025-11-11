@@ -339,10 +339,19 @@ async def download_fruit_report(page: Page, vessel_name: str):
     download_started = False
     for selector in all_option_selectors:
         try:
-            await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="visible")
+            await iframe.wait_for_selector(selector, timeout=SEARCH_TIMEOUT, state="attached")
             all_option = await iframe.query_selector(selector)
             
             if all_option:
+                is_visible = await all_option.is_visible()
+                if not is_visible:
+                    print(f"  ⚠ 'All' option found but not visible with selector: {selector}")
+                    await asyncio.sleep(1)
+                    is_visible = await all_option.is_visible()
+                    if not is_visible:
+                        print(f"  ✗ 'All' option still not visible after wait")
+                        continue
+                
                 await all_option.scroll_into_view_if_needed()
                 await asyncio.sleep(0.5)
                 
