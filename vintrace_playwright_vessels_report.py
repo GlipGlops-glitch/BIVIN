@@ -1,4 +1,17 @@
-#  python vintrace_playwright_vessels_report.py
+"""
+Vintrace Vessel Details Report Automation
+Downloads vessel/barrel details CSV report and removes the first row before saving.
+
+The Vintrace export includes an extra first row (e.g., "Exported on: DATE") before 
+the actual headers. This script removes that first row so the headers (row 2 in the 
+original) become the actual column headers in the saved CSV file.
+
+Usage: python vintrace_playwright_vessels_report.py
+
+Author: GlipGlops-glitch
+Created: 2025-01-11
+Last Updated: 2025-01-11
+"""
 import asyncio
 import os
 import sys
